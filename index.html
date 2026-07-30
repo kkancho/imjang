@@ -16,22 +16,76 @@
   --safe-top:env(safe-area-inset-top); --safe-bot:env(safe-area-inset-bottom);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--txt);
   font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   font-size:15px;line-height:1.45;overscroll-behavior-y:none}
 button,input,select,textarea{font-family:inherit;font-size:15px}
 a{color:var(--accent)}
-.app{max-width:640px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
-header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#12211c,#12211ccc);
-  backdrop-filter:blur(8px);padding:calc(var(--safe-top) + 10px) 16px 10px;border-bottom:1px solid var(--line)}
+.app{max-width:640px;margin:0 auto;height:100%;display:flex;flex-direction:column;position:relative}
+header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211cee);
+  padding:calc(var(--safe-top) + 10px) 14px 8px;border-bottom:1px solid var(--line)}
 .hrow{display:flex;align-items:center;gap:10px}
-.logo{font-weight:800;font-size:18px;letter-spacing:-.3px}
-.logo small{font-weight:500;color:var(--sub);font-size:12px;margin-left:4px}
+.logo{font-weight:800;font-size:17px;letter-spacing:-.3px}
+.logo small{font-weight:500;color:var(--sub);font-size:12px;margin-left:3px}
 .spacer{flex:1}
 .iconbtn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
-  border-radius:10px;padding:8px 11px;font-size:14px;cursor:pointer}
+  border-radius:10px;padding:8px 11px;font-size:13.5px;cursor:pointer}
 .iconbtn:active{transform:scale(.96)}
-main{flex:1;padding:14px 14px calc(90px + var(--safe-bot))}
+/* view toggle */
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:3px;margin-top:9px}
+.seg button{flex:1;background:none;border:none;color:var(--sub);padding:8px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#04120b}
+/* views */
+.view{flex:1;min-height:0;display:none;flex-direction:column;position:relative}
+.view.on{display:flex}
+/* ---------- MAP VIEW ---------- */
+#mapWrap{flex:1;min-height:0;position:relative}
+#map{position:absolute;inset:0;background:var(--panel2)}
+.mapsearch{position:absolute;top:10px;left:10px;right:10px;z-index:6}
+.mapsearch .row{display:flex;gap:7px}
+.mapsearch input{flex:1;background:#0f1a16ee;border:1px solid var(--line);color:var(--txt);
+  border-radius:12px;padding:12px 13px;outline:none;box-shadow:0 4px 14px #0006}
+.mapsearch input:focus{border-color:var(--accent)}
+.mapsearch button{background:var(--accent);color:#04120b;border:none;border-radius:12px;padding:0 16px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px #0006}
+.sresults{margin-top:7px;background:#0f1a16f5;border:1px solid var(--line);border-radius:12px;
+  max-height:44vh;overflow-y:auto;box-shadow:0 8px 22px #0007;display:none}
+.sresults.on{display:block}
+.sresult{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer}
+.sresult:last-child{border:none}
+.sresult:active{background:var(--panel2)}
+.sresult b{display:block;font-size:14.5px}
+.sresult span{color:var(--sub);font-size:12.5px}
+.sresult .tag{display:inline-block;background:var(--chip);color:var(--accent);border-radius:6px;
+  padding:1px 7px;font-size:11px;font-weight:700;margin-right:6px}
+.mapfabs{position:absolute;right:12px;bottom:calc(96px + var(--safe-bot));z-index:6;display:flex;flex-direction:column;gap:9px}
+.mfab{width:46px;height:46px;border-radius:50%;background:#0f1a16ee;border:1px solid var(--line);
+  color:var(--accent);font-size:19px;cursor:pointer;box-shadow:0 4px 14px #0007;display:flex;align-items:center;justify-content:center}
+.mfab:active{background:var(--chip)}
+.poicard{position:absolute;left:12px;right:12px;bottom:calc(96px + var(--safe-bot));z-index:7;
+  background:#0f1a16f7;border:1px solid var(--accent);border-radius:14px;padding:13px;
+  box-shadow:0 10px 26px #0008;display:none}
+.poicard.on{display:block}
+.poicard .x{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer}
+.poicard .code{display:inline-block;background:var(--chip);color:var(--accent);border:1px solid var(--line);
+  border-radius:7px;padding:2px 8px;font-size:12px;font-weight:700;margin-bottom:5px}
+.poicard h3{margin:2px 0 3px;font-size:16px}
+.poicard .addr{color:var(--sub);font-size:13px}
+.poicard .acts{display:flex;gap:8px;margin-top:11px}
+.poicard .acts button{flex:1;border:none;border-radius:10px;padding:11px;font-weight:800;cursor:pointer;font-size:14px}
+.pri{background:var(--accent);color:#04120b}
+.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)!important}
+.mapnotice{position:absolute;inset:0;z-index:8;background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:26px;text-align:center;gap:12px}
+.mapnotice .big{font-size:40px}
+.mapnotice p{color:var(--sub);font-size:13.5px;margin:0;line-height:1.6}
+.mapnotice input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+  border-radius:10px;padding:11px 12px;outline:none;text-align:center}
+.mapnotice button{background:var(--accent);color:#04120b;border:none;border-radius:11px;padding:12px 22px;font-weight:800;cursor:pointer}
+.mylabel{background:#2f7dff;border:2px solid #fff;width:16px;height:16px;border-radius:50%;box-shadow:0 0 0 6px #2f7dff44}
+.pinlabel{background:#0f1a16ee;border:1px solid var(--accent);color:var(--accent);border-radius:8px;
+  padding:2px 7px;font-size:11px;font-weight:700;white-space:nowrap;transform:translateY(-6px)}
+/* ---------- LIST VIEW ---------- */
+.listbody{flex:1;min-height:0;overflow-y:auto;padding:12px 14px calc(90px + var(--safe-bot));-webkit-overflow-scrolling:touch}
 .search{display:flex;gap:8px;margin-bottom:12px}
 .search input{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--txt);
   border-radius:12px;padding:11px 13px;outline:none}
@@ -51,29 +105,27 @@ main{flex:1;padding:14px 14px calc(90px + var(--safe-bot))}
 .badge{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:12px;color:var(--sub)}
 .badge b{color:var(--txt)}
 .badge.g{border-color:#2f7a5a;color:#8fe0bd}
+.badge.p{border-color:#2f7dff;color:#9dc2ff}
 .rank{position:absolute;top:11px;right:11px;background:var(--gold);color:#3a2c00;font-weight:800;
   border-radius:8px;padding:2px 8px;font-size:12px}
 .empty{text-align:center;color:var(--sub);padding:60px 20px}
 .empty .big{font-size:44px;margin-bottom:12px}
-.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + var(--safe-bot));
+/* ---------- shared ---------- */
+.fab{position:absolute;left:14px;right:14px;bottom:calc(16px + var(--safe-bot));
   z-index:30;background:var(--accent);color:#04120b;border:none;border-radius:16px;
-  padding:15px 26px;font-size:16px;font-weight:800;box-shadow:0 8px 24px #0008;cursor:pointer;max-width:612px;width:calc(100% - 28px)}
+  padding:15px 26px;font-size:16px;font-weight:800;box-shadow:0 8px 24px #0008;cursor:pointer}
 .fab:active{background:var(--accent2)}
-/* editor */
 .sheet{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;flex-direction:column;max-width:640px;margin:0 auto}
 .sheet.open{display:flex}
-.sheethead{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);
+.sheethead{flex:0 0 auto;background:var(--panel);border-bottom:1px solid var(--line);
   padding:calc(var(--safe-top) + 10px) 14px 10px;display:flex;align-items:center;gap:10px;z-index:5}
 .sheethead b{font-size:16px;flex:1;text-align:center}
-.sheetbody{flex:1;overflow-y:auto;padding:12px 14px calc(30px + var(--safe-bot));-webkit-overflow-scrolling:touch}
-.tabbar{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px;position:sticky;top:0;background:var(--bg);z-index:4}
+.tabbar{flex:0 0 auto;display:flex;gap:6px;overflow-x:auto;padding:10px 14px 4px;background:var(--bg)}
 .tabbar::-webkit-scrollbar{display:none}
 .tab{white-space:nowrap;background:var(--panel);border:1px solid var(--line);color:var(--sub);
   border-radius:20px;padding:8px 14px;font-size:13px;cursor:pointer}
 .tab.on{background:var(--accent);color:#04120b;border-color:var(--accent);font-weight:700}
-.pane{display:none;animation:fade .2s}
-.pane.on{display:block}
-@keyframes fade{from{opacity:0}to{opacity:1}}
+.sheetbody{flex:1;min-height:0;overflow-y:auto;padding:8px 14px 20px;-webkit-overflow-scrolling:touch}
 .grp{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:12px}
 .grp h4{margin:0 0 10px;font-size:14px;color:var(--accent)}
 .field{margin-bottom:11px}
@@ -90,9 +142,12 @@ main{flex:1;padding:14px 14px calc(90px + var(--safe-bot))}
 .addbtn{width:100%;background:var(--panel2);border:1px dashed var(--line);color:var(--accent);
   border-radius:10px;padding:11px;cursor:pointer;font-weight:600;margin-top:2px}
 .addbtn:active{background:var(--chip)}
+.btnrow{display:flex;gap:8px;margin-bottom:9px}
+.btnrow button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--accent);
+  border-radius:10px;padding:11px 6px;cursor:pointer;font-weight:600;font-size:13px}
+.btnrow button:active{background:var(--chip)}
 .subcard{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:9px;position:relative}
 .subcard .del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer}
-/* media */
 .media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .media-item{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--panel2);border:1px solid var(--line)}
 .media-item img,.media-item video{width:100%;height:100%;object-fit:cover}
@@ -101,7 +156,7 @@ main{flex:1;padding:14px 14px calc(90px + var(--safe-bot))}
 .mediabtns{display:flex;gap:8px;margin-bottom:11px}
 .mediabtns label{flex:1;text-align:center;background:var(--panel2);border:1px solid var(--line);
   border-radius:10px;padding:12px;cursor:pointer;color:var(--accent);font-weight:600}
-.savebar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+.savebar{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);
   padding:11px 14px calc(11px + var(--safe-bot));display:flex;gap:9px}
 .savebar button{flex:1;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
 .btn-save{background:var(--accent);color:#04120b}
@@ -110,40 +165,78 @@ main{flex:1;padding:14px 14px calc(90px + var(--safe-bot))}
 .chkline:last-child{border:none}
 .chkline input{width:20px;height:20px;margin-top:1px;flex:0 0 auto;accent-color:var(--accent)}
 .chkline span{font-size:13.5px}
+.locbox{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:10px;font-size:13px}
+.locbox.set{border-color:#2f7a5a;color:#8fe0bd}
 .toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-bot));transform:translateX(-50%);
   background:#04120b;border:1px solid var(--accent);color:var(--accent);padding:11px 20px;border-radius:12px;
-  z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;font-weight:600;font-size:14px}
+  z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;font-weight:600;font-size:14px;max-width:88%;text-align:center}
 .toast.show{opacity:1}
 .viewer{position:fixed;inset:0;background:#000e;z-index:80;display:none;align-items:center;justify-content:center;padding:20px}
 .viewer.open{display:flex}
 .viewer img,.viewer video{max-width:100%;max-height:100%;border-radius:12px}
 .viewer .close{position:absolute;top:calc(var(--safe-top) + 12px);right:16px;background:#fff2;border:none;color:#fff;
   border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer}
-.foot{color:var(--sub);font-size:11px;text-align:center;padding:14px 0 4px}
-.hint{font-size:12px;color:var(--sub);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+/* picker */
+.picker{position:fixed;inset:0;z-index:70;background:var(--bg);display:none;flex-direction:column;max-width:640px;margin:0 auto}
+.picker.open{display:flex}
+#pickMapWrap{flex:1;min-height:0;position:relative}
+#pickMap{position:absolute;inset:0}
+.crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:5;pointer-events:none;font-size:34px;filter:drop-shadow(0 3px 5px #000a)}
+.pickhint{position:absolute;top:10px;left:10px;right:10px;z-index:5;background:#0f1a16ee;border:1px solid var(--line);
+  border-radius:11px;padding:10px 12px;font-size:12.5px;color:var(--sub);text-align:center}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div class="hrow">
-      <div class="logo">새암 임장노트 <small id="ver">v0.1</small></div>
+      <div class="logo">새암 임장노트 <small id="ver">v0.2</small></div>
       <div class="spacer"></div>
       <button class="iconbtn" onclick="openBackup()">⤓ 백업</button>
     </div>
+    <div class="seg">
+      <button id="segMap" class="on" onclick="setView('map')">🗺 지도</button>
+      <button id="segList" onclick="setView('list')">📋 목록</button>
+    </div>
   </header>
-  <main>
-    <div class="search">
-      <input id="q" type="search" placeholder="코드·아파트명·지역 검색 (예: SEO-0001, 공릉)" oninput="renderList()">
+
+  <!-- ===== MAP VIEW ===== -->
+  <div class="view on" id="mapView">
+    <div id="mapWrap">
+      <div id="map"></div>
+      <div class="mapsearch">
+        <div class="row">
+          <input id="mq" type="search" placeholder="주소·아파트명 검색 (예: 공릉동 707)"
+                 onkeydown="if(event.key==='Enter')doMapSearch()">
+          <button onclick="doMapSearch()">검색</button>
+        </div>
+        <div class="sresults" id="sresults"></div>
+      </div>
+      <div class="mapfabs">
+        <button class="mfab" title="현재 위치" onclick="goMyLocation(true)">◎</button>
+        <button class="mfab" title="등록 물건 전체 보기" onclick="fitAllPins()">⤢</button>
+      </div>
+      <div class="poicard" id="poicard"></div>
+      <div class="mapnotice" id="mapnotice" style="display:none"></div>
     </div>
-    <div class="stats">
-      <div class="stat"><b id="stTotal">0</b><span>등록 물건</span></div>
-      <div class="stat"><b id="stPhoto">0</b><span>사진·영상</span></div>
-      <div class="stat"><b id="stItv">0</b><span>인터뷰</span></div>
+    <button class="fab" onclick="addHere()">＋ 임장 물건 추가</button>
+  </div>
+
+  <!-- ===== LIST VIEW ===== -->
+  <div class="view" id="listView">
+    <div class="listbody">
+      <div class="search">
+        <input id="q" type="search" placeholder="코드·아파트명·지역 검색 (예: SEO-0001, 공릉)" oninput="renderList()">
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="stTotal">0</b><span>등록 물건</span></div>
+        <div class="stat"><b id="stPhoto">0</b><span>사진·영상</span></div>
+        <div class="stat"><b id="stItv">0</b><span>인터뷰</span></div>
+      </div>
+      <div id="list"></div>
     </div>
-    <div id="list"></div>
-  </main>
-  <button class="fab" onclick="openEditor()">＋ 임장 물건 추가</button>
+    <button class="fab" onclick="openEditor()">＋ 임장 물건 추가</button>
+  </div>
 </div>
 
 <!-- ===== Editor Sheet ===== -->
@@ -161,7 +254,21 @@ main{flex:1;padding:14px 14px calc(90px + var(--safe-bot))}
   </div>
 </div>
 
-<!-- backup viewer -->
+<!-- ===== Location picker ===== -->
+<div class="picker" id="picker">
+  <div class="sheethead">
+    <button class="iconbtn" onclick="closePicker()">← 취소</button>
+    <b>지도에서 위치 지정</b>
+    <button class="iconbtn" onclick="confirmPick()">확인</button>
+  </div>
+  <div id="pickMapWrap">
+    <div id="pickMap"></div>
+    <div class="crosshair">📍</div>
+    <div class="pickhint">지도를 움직여 핀을 물건 위치에 맞춘 뒤 확인을 누르세요</div>
+  </div>
+  <div class="savebar"><button class="btn-save" onclick="confirmPick()">이 위치로 지정</button></div>
+</div>
+
 <div class="viewer" id="viewer" onclick="if(event.target.id==='viewer')closeViewer()">
   <button class="close" onclick="closeViewer()">×</button>
   <div id="viewerBody"></div>
@@ -170,13 +277,17 @@ main{flex:1;padding:14px 14px calc(90px + var(--safe-bot))}
 
 <script>
 /* ============================================================
-   새암 임장노트 — 로컬 우선(IndexedDB) / 클라우드 이관 대비 구조
-   데이터 모델은 구글시트(단지정보·매물정보·가격비교·시세트래킹)를 반영
+   새암 임장노트 v0.2 — 지도(카카오맵) + 로컬 우선(IndexedDB)
    ============================================================ */
-const APP_VERSION='v0.1';
+const APP_VERSION='v0.2';
 document.getElementById('ver').textContent=APP_VERSION;
 
-/* ---------- IndexedDB (저장소 추상화: 나중에 Supabase로 교체 지점) ---------- */
+/* 카카오 JavaScript 키.
+   배포본에는 여기에 키를 넣습니다. 비어 있으면 앱 안에서 직접 입력할 수 있습니다. */
+const KAKAO_KEY_BUILTIN='dd45c6824d4fce8d61b2449172b73768';
+function kakaoKey(){ return KAKAO_KEY_BUILTIN || localStorage.getItem('kakaoKey') || ''; }
+
+/* ---------- IndexedDB (저장소 추상화: 클라우드 이관 시 이 4개만 교체) ---------- */
 const DB_NAME='saeam_imjang', DB_VER=1;
 let db;
 function openDB(){return new Promise((res,rej)=>{
@@ -196,12 +307,14 @@ function idbPut(store,val){return new Promise(res=>{const r=tx(store,'readwrite'
 function idbDel(store,id){return new Promise(res=>{const r=tx(store,'readwrite').delete(id);r.onsuccess=()=>res(true);});}
 
 /* ---------- state ---------- */
-let RECORDS=[];       // all records (media stored separately by id)
-let cur=null;         // record being edited
-let curTab='basic';
+let RECORDS=[], cur=null, curTab='basic', curView='map';
+let map=null, geocoder=null, places=null, markers=[], myOverlay=null, tempMarker=null;
+let pickMap=null, pickTarget=null;
+let lastCenter=null;
+const SEOUL={lat:37.5665,lng:126.9780};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
-/* ---------- code generator: 지역약칭 + 일련번호 ---------- */
+/* ---------- code generator ---------- */
 const REGION_ABBR={'서울':'SEO','부산':'BSN','대구':'DGU','인천':'ICN','광주':'GWJ','대전':'DJN','울산':'ULS',
   '세종':'SJG','경기':'GGD','강원':'GWD','충북':'CHB','충남':'CHN','전북':'JBK','전남':'JNM','경북':'GBK',
   '경남':'GNM','제주':'JJU'};
@@ -217,54 +330,336 @@ function makeCode(sido){
 const $=s=>document.querySelector(s);
 const num=v=>{const n=parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;};
 const comma=n=>n?Number(n).toLocaleString('ko-KR'):'';
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1800);}
-// 전세가율(%) = 전세/매매*100 ; 평단가(만원/평)=가격(만원)/평형
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
 function jeonseRatio(sale,jeonse){sale=num(sale);jeonse=num(jeonse);return sale>0?(jeonse/sale*100):0;}
 function pyeongPrice(price,py){price=num(price);py=num(py);return py>0?(price/py):0;}
+function fullAddr(r){return r.road||r.jibun||[r.sido,r.sigungu,r.emd,r.jibun].filter(Boolean).join(' ');}
 
 /* ---------- blank record ---------- */
 function blank(){return{
   id:uid(),code:'',createdAt:Date.now(),updatedAt:Date.now(),
   aptName:'',sido:'',sigungu:'',emd:'',jibun:'',road:'',bjd:'',
-  // 입지
+  lat:null,lng:null,
   subway:'',trait:'',moveIn:'',unsold:'',jobs:'',transit:'',amenity:'',nature:'',jimok:'',school:'',story:'',
-  // 단지
   far:'',supply:'',exclusive:'',pyeong:'',households:'',parking:'',parkingPer:'',corridor:'',
-  // 가격비교
   sale:'',jeonse:'',areaPP:'',grade:'',ranking:'',
-  // 매물(복수)
-  listings:[],
-  // 시세트래킹(복수)
-  tracks:[],
-  // 인터뷰(복수)
-  interviews:[],
-  memo:'',
-  checklist:{},
-  photos:[],videos:[]
+  listings:[],tracks:[],interviews:[],
+  memo:'',checklist:{},photos:[],videos:[]
 };}
 
-/* ---------- tabs ---------- */
 const TABS=[
-  ['basic','기본·입지'],['complex','단지'],['listing','매물'],
+  ['basic','기본·위치·입지'],['complex','단지'],['listing','매물'],
   ['price','가격비교'],['track','시세트래킹'],['media','사진·영상'],
   ['interview','인터뷰·메모'],['check','임장 체크리스트']
 ];
 
-/* ---------- init ---------- */
+/* ============================ INIT ============================ */
 (async function(){
   await openDB();
   RECORDS=await idbAll('records');
   buildTabs();
   renderList();
+  initMap();
 })();
 
+/* ============================ KAKAO MAP ============================ */
+function loadKakaoSDK(key){
+  return new Promise((res,rej)=>{
+    if(window.kakao&&window.kakao.maps&&window.kakao.maps.Map)return res(true);
+    const s=document.createElement('script');
+    s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services&autoload=false';
+    s.onload=()=>{try{kakao.maps.load(()=>res(true));}catch(e){rej(e);}};
+    s.onerror=()=>rej(new Error('SDK_LOAD_FAIL'));
+    document.head.appendChild(s);
+  });
+}
+function showMapNotice(html){const n=$('#mapnotice');n.style.display='flex';n.innerHTML=html;}
+function hideMapNotice(){$('#mapnotice').style.display='none';}
+
+async function initMap(){
+  const key=kakaoKey();
+  if(!key){
+    showMapNotice(`<div class="big">🗺️</div>
+      <p><b>지도를 쓰려면 카카오 지도 키가 필요합니다.</b><br>
+      developers.kakao.com 에서 앱을 만들고 <b>JavaScript 키</b>를 발급받아<br>아래에 붙여넣으세요. 한 번만 하면 됩니다.</p>
+      <input id="keyInput" placeholder="JavaScript 키 붙여넣기" autocapitalize="off" autocorrect="off">
+      <button onclick="saveKey()">지도 켜기</button>
+      <p style="font-size:12px">키가 없어도 목록·기록·사진 기능은 모두 정상 동작합니다.</p>`);
+    return;
+  }
+  try{
+    await loadKakaoSDK(key);
+  }catch(e){
+    showMapNotice(`<div class="big">⚠️</div>
+      <p><b>지도를 불러오지 못했습니다.</b><br>
+      인터넷 연결을 확인해 주세요. 키가 잘못되었거나 카카오 개발자 사이트에<br>
+      이 사이트 도메인이 등록되지 않은 경우에도 발생합니다.</p>
+      <button onclick="resetKey()">키 다시 입력</button>
+      <p style="font-size:12px">지도 외 기능은 정상 동작합니다. 상단에서 <b>목록</b>을 눌러 계속 사용하세요.</p>`);
+    return;
+  }
+  hideMapNotice();
+  const saved=JSON.parse(localStorage.getItem('lastCenter')||'null');
+  const c=saved||SEOUL;
+  map=new kakao.maps.Map($('#map'),{center:new kakao.maps.LatLng(c.lat,c.lng),level:saved?.level||5});
+  geocoder=new kakao.maps.services.Geocoder();
+  places=new kakao.maps.services.Places();
+  kakao.maps.event.addListener(map,'idle',()=>{
+    const ct=map.getCenter();
+    lastCenter={lat:ct.getLat(),lng:ct.getLng(),level:map.getLevel()};
+    localStorage.setItem('lastCenter',JSON.stringify(lastCenter));
+  });
+  kakao.maps.event.addListener(map,'click',()=>{hideResults();$('#poicard').classList.remove('on');});
+  refreshPins();
+  goMyLocation(false);   // 앱을 켜면 현재 위치로
+}
+function saveKey(){
+  const v=($('#keyInput').value||'').trim();
+  if(!v)return toast('키를 입력해 주세요');
+  localStorage.setItem('kakaoKey',v);
+  hideMapNotice();initMap();
+}
+function resetKey(){localStorage.removeItem('kakaoKey');initMap();}
+
+/* ---- 현재 위치 ---- */
+function goMyLocation(announce){
+  if(!map)return;
+  if(!navigator.geolocation){if(announce)toast('이 기기에서는 위치를 쓸 수 없습니다');return;}
+  if(announce)toast('현재 위치를 찾는 중...');
+  navigator.geolocation.getCurrentPosition(p=>{
+    const ll=new kakao.maps.LatLng(p.coords.latitude,p.coords.longitude);
+    map.setCenter(ll);
+    if(announce)map.setLevel(4);
+    if(myOverlay)myOverlay.setMap(null);
+    myOverlay=new kakao.maps.CustomOverlay({position:ll,content:'<div class="mylabel"></div>',zIndex:2});
+    myOverlay.setMap(map);
+    if(announce)toast('현재 위치로 이동했습니다');
+  },err=>{
+    if(announce){
+      toast(err.code===1?'위치 권한이 거부되어 있습니다':'위치를 찾지 못했습니다');
+    }
+  },{enableHighAccuracy:true,timeout:8000,maximumAge:60000});
+}
+
+/* ---- 핀 ---- */
+function clearPins(){markers.forEach(m=>{m.marker.setMap(null);if(m.label)m.label.setMap(null);});markers=[];}
+function refreshPins(){
+  if(!map)return;
+  clearPins();
+  RECORDS.filter(r=>r.lat&&r.lng).forEach(r=>{
+    const ll=new kakao.maps.LatLng(r.lat,r.lng);
+    const marker=new kakao.maps.Marker({position:ll,map:map,title:r.aptName||r.code});
+    const label=new kakao.maps.CustomOverlay({position:ll,yAnchor:2.1,zIndex:1,
+      content:'<div class="pinlabel">'+esc(r.code||r.aptName||'')+'</div>'});
+    label.setMap(map);
+    kakao.maps.event.addListener(marker,'click',()=>showPoi(r.id));
+    markers.push({marker,label,id:r.id});
+  });
+}
+function showPoi(id){
+  const r=RECORDS.find(x=>x.id===id);if(!r)return;
+  const ratio=jeonseRatio(r.sale,r.jeonse),pp=pyeongPrice(r.sale,r.pyeong);
+  $('#poicard').innerHTML=`<button class="x" onclick="document.getElementById('poicard').classList.remove('on')">×</button>
+    <span class="code">${esc(r.code||'코드미지정')}</span>
+    <h3>${esc(r.aptName||'(이름 미입력)')}</h3>
+    <div class="addr">${esc(fullAddr(r)||'주소 미입력')}</div>
+    <div class="row" style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">
+      ${r.pyeong?`<span class="badge"><b>${esc(r.pyeong)}</b>평</span>`:''}
+      ${r.sale?`<span class="badge">매매 <b>${comma(r.sale)}</b></span>`:''}
+      ${ratio?`<span class="badge g">전세가율 <b>${ratio.toFixed(0)}%</b></span>`:''}
+      ${pp?`<span class="badge">평단 <b>${pp.toFixed(0)}</b></span>`:''}
+    </div>
+    <div class="acts">
+      <button class="sec" onclick="document.getElementById('poicard').classList.remove('on')">닫기</button>
+      <button class="pri" onclick="openEditor('${r.id}')">상세 보기</button>
+    </div>`;
+  $('#poicard').classList.add('on');
+  map.panTo(new kakao.maps.LatLng(r.lat,r.lng));
+}
+function fitAllPins(){
+  if(!map)return;
+  const pts=RECORDS.filter(r=>r.lat&&r.lng);
+  if(!pts.length)return toast('위치가 지정된 물건이 없습니다');
+  const b=new kakao.maps.LatLngBounds();
+  pts.forEach(r=>b.extend(new kakao.maps.LatLng(r.lat,r.lng)));
+  map.setBounds(b);
+  toast(pts.length+'개 물건을 표시했습니다');
+}
+
+/* ---- 검색 ---- */
+function hideResults(){$('#sresults').classList.remove('on');}
+function doMapSearch(){
+  const q=($('#mq').value||'').trim();
+  if(!q)return;
+  if(!map)return toast('지도가 아직 준비되지 않았습니다');
+  const out=[];
+  // 1) 내가 등록한 물건 먼저
+  RECORDS.forEach(r=>{
+    const hay=[r.code,r.aptName,r.sido,r.sigungu,r.emd,r.jibun,r.road].join(' ').toLowerCase();
+    if(hay.includes(q.toLowerCase()))out.push({kind:'saved',id:r.id,title:r.aptName||r.code,sub:fullAddr(r),lat:r.lat,lng:r.lng});
+  });
+  // 2) 주소 검색 → 3) 키워드(장소) 검색
+  geocoder.addressSearch(q,(res,status)=>{
+    if(status===kakao.maps.services.Status.OK){
+      res.slice(0,5).forEach(a=>out.push({kind:'addr',title:a.road_address?a.road_address.address_name:a.address_name,
+        sub:a.address_name,lat:parseFloat(a.y),lng:parseFloat(a.x)}));
+    }
+    places.keywordSearch(q,(pres,pstatus)=>{
+      if(pstatus===kakao.maps.services.Status.OK){
+        pres.slice(0,7).forEach(p=>out.push({kind:'place',title:p.place_name,
+          sub:p.road_address_name||p.address_name,lat:parseFloat(p.y),lng:parseFloat(p.x)}));
+      }
+      renderResults(out,q);
+    });
+  });
+}
+function renderResults(list,q){
+  const el=$('#sresults');
+  if(!list.length){el.innerHTML='<div class="sresult"><b>검색 결과가 없습니다</b><span>지번주소·도로명주소·아파트명으로 다시 시도해 보세요</span></div>';el.classList.add('on');return;}
+  el.innerHTML=list.map((r,i)=>{
+    const tag=r.kind==='saved'?'내 물건':(r.kind==='addr'?'주소':'장소');
+    return `<div class="sresult" onclick="pickResult(${i})">
+      <b><span class="tag">${tag}</span>${esc(r.title)}</b><span>${esc(r.sub||'')}</span></div>`;
+  }).join('');
+  el._list=list;
+  el.classList.add('on');
+}
+function pickResult(i){
+  const list=$('#sresults')._list||[];const r=list[i];if(!r)return;
+  hideResults();
+  if(r.kind==='saved'){
+    if(!r.lat||!r.lng){toast('이 물건은 위치가 지정되어 있지 않습니다');openEditor(r.id);return;}
+    map.setLevel(3);showPoi(r.id);return;
+  }
+  const ll=new kakao.maps.LatLng(r.lat,r.lng);
+  map.setLevel(3);map.setCenter(ll);
+  if(tempMarker)tempMarker.setMap(null);
+  tempMarker=new kakao.maps.Marker({position:ll,map:map,zIndex:5});
+  $('#poicard').innerHTML=`<button class="x" onclick="clearTemp()">×</button>
+    <span class="code">검색 위치</span>
+    <h3>${esc(r.title)}</h3>
+    <div class="addr">${esc(r.sub||'')}</div>
+    <div class="acts">
+      <button class="sec" onclick="clearTemp()">닫기</button>
+      <button class="pri" onclick="addAt(${r.lat},${r.lng},'${esc(r.sub||'').replace(/'/g,"\\'")}','${esc(r.title).replace(/'/g,"\\'")}')">여기에 물건 추가</button>
+    </div>`;
+  $('#poicard').classList.add('on');
+}
+function clearTemp(){if(tempMarker){tempMarker.setMap(null);tempMarker=null;}$('#poicard').classList.remove('on');}
+
+/* 지도 중심에 물건 추가 */
+function addHere(){
+  if(!map){openEditor();return;}
+  const c=map.getCenter();
+  addAt(c.getLat(),c.getLng(),'','');
+}
+function addAt(lat,lng,addr,name){
+  clearTemp();
+  openEditor();
+  cur.lat=lat;cur.lng=lng;
+  if(name&&!cur.aptName)cur.aptName=name;
+  if(addr)applyAddressString(addr);
+  // 좌표 → 주소 자동 채움
+  if(geocoder&&!addr){
+    geocoder.coord2Address(lng,lat,(res,status)=>{
+      if(status===kakao.maps.services.Status.OK&&res[0]){
+        const a=res[0];
+        const road=a.road_address?a.road_address.address_name:'';
+        const jib=a.address?a.address.address_name:'';
+        if(road&&!cur.road)cur.road=road;
+        if(jib&&!cur.jibun)cur.jibun=jib;
+        applyAddressString(jib||road);
+        if(curTab==='basic')renderPanes();
+      }
+    });
+  }
+  renderPanes();
+}
+function applyAddressString(s){
+  if(!s)return;
+  const p=s.split(/\s+/);
+  if(p[0]&&!cur.sido)cur.sido=p[0].replace('특별시','').replace('광역시','').replace('특별자치시','').replace('특별자치도','');
+  if(p[1]&&!cur.sigungu)cur.sigungu=p[1];
+  if(p[2]&&!cur.emd)cur.emd=p[2];
+  if(!cur.jibun)cur.jibun=s;
+}
+
+/* ---- 주소로 좌표 찾기 (편집 화면) ---- */
+function geocodeCurrent(){
+  if(!geocoder)return toast('지도가 준비되지 않았습니다. 지도 탭에서 키를 먼저 등록해 주세요.');
+  const q=(cur.road||'').trim()||(cur.jibun||'').trim()||
+          [cur.sido,cur.sigungu,cur.emd,cur.jibun].filter(Boolean).join(' ').trim();
+  if(!q)return toast('먼저 주소를 입력해 주세요');
+  toast('주소로 위치를 찾는 중...');
+  geocoder.addressSearch(q,(res,status)=>{
+    if(status===kakao.maps.services.Status.OK&&res[0]){
+      cur.lat=parseFloat(res[0].y);cur.lng=parseFloat(res[0].x);
+      renderPanes();toast('위치를 찾았습니다');
+    }else{
+      // 주소로 안 되면 아파트명 키워드로 재시도
+      const kw=[cur.sigungu,cur.emd,cur.aptName].filter(Boolean).join(' ').trim();
+      if(kw&&places){
+        places.keywordSearch(kw,(pres,pstatus)=>{
+          if(pstatus===kakao.maps.services.Status.OK&&pres[0]){
+            cur.lat=parseFloat(pres[0].y);cur.lng=parseFloat(pres[0].x);
+            renderPanes();toast('아파트명으로 위치를 찾았습니다');
+          }else toast('주소를 찾지 못했습니다. 지도에서 직접 지정해 주세요.');
+        });
+      }else toast('주소를 찾지 못했습니다. 지도에서 직접 지정해 주세요.');
+    }
+  });
+}
+function useMyLocationForRecord(){
+  if(!navigator.geolocation)return toast('이 기기에서는 위치를 쓸 수 없습니다');
+  toast('현재 위치를 찾는 중...');
+  navigator.geolocation.getCurrentPosition(p=>{
+    cur.lat=p.coords.latitude;cur.lng=p.coords.longitude;
+    renderPanes();toast('현재 위치로 지정했습니다');
+  },err=>toast(err.code===1?'위치 권한이 거부되어 있습니다':'위치를 찾지 못했습니다'),
+  {enableHighAccuracy:true,timeout:8000});
+}
+function clearLoc(){cur.lat=null;cur.lng=null;renderPanes();toast('위치를 지웠습니다');}
+
+/* ---- 지도에서 직접 지정 ---- */
+function openPicker(){
+  if(!kakaoKey()||!window.kakao||!window.kakao.maps)
+    return toast('지도가 준비되지 않았습니다. 지도 탭에서 키를 먼저 등록해 주세요.');
+  $('#picker').classList.add('open');
+  const c=(cur.lat&&cur.lng)?{lat:cur.lat,lng:cur.lng}:(lastCenter||SEOUL);
+  setTimeout(()=>{
+    if(!pickMap){
+      pickMap=new kakao.maps.Map($('#pickMap'),{center:new kakao.maps.LatLng(c.lat,c.lng),level:3});
+    }else{
+      pickMap.relayout();
+      pickMap.setCenter(new kakao.maps.LatLng(c.lat,c.lng));
+    }
+    pickMap.relayout();
+  },80);
+}
+function closePicker(){$('#picker').classList.remove('open');}
+function confirmPick(){
+  if(!pickMap)return closePicker();
+  const c=pickMap.getCenter();
+  cur.lat=c.getLat();cur.lng=c.getLng();
+  closePicker();renderPanes();toast('위치를 지정했습니다');
+}
+
+/* ============================ VIEW SWITCH ============================ */
+function setView(v){
+  curView=v;
+  $('#mapView').classList.toggle('on',v==='map');
+  $('#listView').classList.toggle('on',v==='list');
+  $('#segMap').classList.toggle('on',v==='map');
+  $('#segList').classList.toggle('on',v==='list');
+  if(v==='map'&&map)setTimeout(()=>map.relayout(),60);
+}
+
 /* ============================ LIST ============================ */
-async function mediaCount(){let p=0,v=0;RECORDS.forEach(r=>{p+=(r.photos?.length||0)+(r.videos?.length||0);});return p;}
 function renderList(){
   const q=($('#q').value||'').trim().toLowerCase();
   let arr=[...RECORDS].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   if(q)arr=arr.filter(r=>[r.code,r.aptName,r.sido,r.sigungu,r.emd,r.jibun,r.road,r.story].join(' ').toLowerCase().includes(q));
-  // stats
   $('#stTotal').textContent=RECORDS.length;
   let photos=0,itv=0;RECORDS.forEach(r=>{photos+=(r.photos?.length||0)+(r.videos?.length||0);itv+=(r.interviews?.length||0);});
   $('#stPhoto').textContent=photos;$('#stItv').textContent=itv;
@@ -274,22 +669,22 @@ function renderList(){
   el.innerHTML='';
   arr.forEach(async r=>{
     const c=document.createElement('div');c.className='card';c.onclick=()=>openEditor(r.id);
-    const ratio=jeonseRatio(r.sale,r.jeonse);
-    const pp=pyeongPrice(r.sale,r.pyeong);
+    const ratio=jeonseRatio(r.sale,r.jeonse), pp=pyeongPrice(r.sale,r.pyeong);
     let thumbHtml='';
     if(r.photos&&r.photos.length){const m=await idbGet('media',r.photos[0]);if(m)thumbHtml=`<img class="thumb" src="${URL.createObjectURL(m.blob)}">`;}
     c.innerHTML=`${thumbHtml}
-      ${r.ranking?`<div class="rank">★ ${r.ranking}</div>`:''}
-      <span class="code">${r.code||'코드미지정'}</span>
-      <h3>${r.aptName||'(이름 미입력)'}</h3>
-      <div class="addr">${[r.sido,r.sigungu,r.emd].filter(Boolean).join(' ')||r.road||r.jibun||'주소 미입력'}</div>
+      ${r.ranking?`<div class="rank">★ ${esc(r.ranking)}</div>`:''}
+      <span class="code">${esc(r.code||'코드미지정')}</span>
+      <h3>${esc(r.aptName||'(이름 미입력)')}</h3>
+      <div class="addr">${esc([r.sido,r.sigungu,r.emd].filter(Boolean).join(' ')||r.road||r.jibun||'주소 미입력')}</div>
       <div class="row">
-        ${r.pyeong?`<span class="badge"><b>${r.pyeong}</b>평</span>`:''}
+        ${r.lat&&r.lng?`<span class="badge p">📍 위치</span>`:''}
+        ${r.pyeong?`<span class="badge"><b>${esc(r.pyeong)}</b>평</span>`:''}
         ${r.sale?`<span class="badge">매매 <b>${comma(r.sale)}</b></span>`:''}
         ${r.jeonse?`<span class="badge">전세 <b>${comma(r.jeonse)}</b></span>`:''}
         ${ratio?`<span class="badge g">전세가율 <b>${ratio.toFixed(0)}%</b></span>`:''}
         ${pp?`<span class="badge">평단 <b>${pp.toFixed(0)}</b></span>`:''}
-        ${r.photos?.length||r.videos?.length?`<span class="badge">📷 ${(r.photos?.length||0)+(r.videos?.length||0)}</span>`:''}
+        ${(r.photos?.length||r.videos?.length)?`<span class="badge">📷 ${(r.photos?.length||0)+(r.videos?.length||0)}</span>`:''}
       </div>`;
     el.appendChild(c);
   });
@@ -303,21 +698,20 @@ function buildTabs(){
 }
 function openEditor(id){
   cur = id ? JSON.parse(JSON.stringify(RECORDS.find(r=>r.id===id))) : blank();
-  cur._isNew = !id;
   curTab='basic';
   $('#edTitle').textContent = id ? (cur.code||cur.aptName||'물건 편집') : '새 물건';
   $('#delBtn').style.display = id ? 'block' : 'none';
   buildTabs();renderPanes();
   $('#sheet').classList.add('open');
   $('#sheetbody').scrollTop=0;
+  $('#poicard').classList.remove('on');
 }
 function closeEditor(){$('#sheet').classList.remove('open');cur=null;}
 
-/* bind helper: reads back into cur on input */
 function F(label,key,type='text',placeholder='',opts){
-  const val=cur[key]??'';
+  const val=esc(cur[key]??'');
   if(type==='textarea')return `<div class="field"><label>${label}</label><textarea data-k="${key}" placeholder="${placeholder}">${val}</textarea></div>`;
-  if(type==='select'){let o=opts.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('');
+  if(type==='select'){let o=opts.map(x=>`<option ${x===cur[key]?'selected':''}>${x}</option>`).join('');
     return `<div class="field"><label>${label}</label><select data-k="${key}"><option value=""></option>${o}</select></div>`;}
   return `<div class="field"><label>${label}</label><input data-k="${key}" type="${type}" inputmode="${type==='number'?'decimal':'text'}" value="${val}" placeholder="${placeholder}"></div>`;
 }
@@ -328,10 +722,7 @@ function bindInputs(root){
   });
 }
 function liveCalc(){
-  // 가격비교 계산 표시 갱신
-  const r=jeonseRatio(cur.sale,cur.jeonse);
-  const pp=pyeongPrice(cur.sale,cur.pyeong);
-  const gap=num(cur.areaPP)-pp;
+  const r=jeonseRatio(cur.sale,cur.jeonse), pp=pyeongPrice(cur.sale,cur.pyeong), gap=num(cur.areaPP)-pp;
   const box=document.getElementById('priceCalc');
   if(box)box.innerHTML=`전세가율 <b>${r?r.toFixed(1)+'%':'-'}</b> · 물건 평단가 <b>${pp?pp.toFixed(0)+' 만원/평':'-'}</b>`+
     (num(cur.areaPP)?` · 지역대비 차익 <b>${gap>=0?'+':''}${gap.toFixed(0)} 만원/평 ${gap>=0?'(저평가)':'(고평가)'}</b>`:'');
@@ -341,6 +732,7 @@ function renderPanes(){
   const body=$('#sheetbody');
   let html='';
   if(curTab==='basic'){
+    const hasLoc=cur.lat&&cur.lng;
     html=`
     <div class="grp"><h4>기본 정보</h4>
       <div class="two">${F('코드값','code','text','자동생성 됩니다')}${F('랭킹','ranking','number','예: 1')}</div>
@@ -351,6 +743,20 @@ function renderPanes(){
       ${F('지번주소','jibun','text','서울 노원구 공릉동 707')}
       ${F('도로명주소','road','text','서울특별시 노원구 동일로198가길 149')}
       ${F('법정동코드','bjd','text','(선택)')}
+    </div>
+    <div class="grp"><h4>지도 위치</h4>
+      <div class="locbox ${hasLoc?'set':''}">${hasLoc
+        ? `📍 위치 지정됨 &nbsp;<span style="opacity:.75">${cur.lat.toFixed(6)}, ${cur.lng.toFixed(6)}</span>`
+        : '위치가 아직 지정되지 않았습니다. 지정하면 지도에 핀으로 표시됩니다.'}</div>
+      <div class="btnrow">
+        <button onclick="geocodeCurrent()">🔎 주소로 찾기</button>
+        <button onclick="useMyLocationForRecord()">◎ 현재 위치</button>
+      </div>
+      <div class="btnrow">
+        <button onclick="openPicker()">🗺 지도에서 직접 지정</button>
+        ${hasLoc?`<button onclick="clearLoc()" style="color:var(--danger)">위치 지우기</button>`:''}
+      </div>
+      <div class="mini">저장할 때 위치가 없으면 입력한 주소로 자동으로 한 번 찾아봅니다.</div>
     </div>
     <div class="grp"><h4>입지 — 4요소 & 지역분석</h4>
       <div class="two">${F('일자리(주변 직장/명)','jobs','text')}${F('교통(주요지 소요, 분)','transit','text')}</div>
@@ -398,10 +804,10 @@ function renderPanes(){
   }
   else if(curTab==='media'){
     html=`<div class="grp"><h4>사진 · 동영상</h4>
-      <div class="hint">촬영하면 기기 내부(IndexedDB)에 저장됩니다. 서버로 전송되지 않으며, 백업 파일로 안전하게 보관하세요.</div>
+      <div class="mini">촬영하면 기기 내부에 저장됩니다. 서버로 전송되지 않으니 백업으로 보관하세요.</div>
       <div class="mediabtns">
-        <label>📷 사진 촬영<input type="file" accept="image/*" capture="environment" style="display:none" onchange="addMedia(event,'photo')"></label>
-        <label>🎥 동영상<input type="file" accept="video/*" capture="environment" style="display:none" onchange="addMedia(event,'video')"></label>
+        <label>📷 사진<input type="file" accept="image/*" capture="environment" style="display:none" onchange="addMedia(event,'photo')"></label>
+        <label>🎥 영상<input type="file" accept="video/*" capture="environment" style="display:none" onchange="addMedia(event,'video')"></label>
         <label>🖼 갤러리<input type="file" accept="image/*,video/*" multiple style="display:none" onchange="addMedia(event,'auto')"></label>
       </div>
       <div class="media-grid" id="mediaGrid"></div>
@@ -440,14 +846,14 @@ function renderListings(){
   const w=$('#listingWrap');if(!w)return;
   if(!cur.listings.length){w.innerHTML='<div class="mini">등록된 매물이 없습니다.</div>';return;}
   w.innerHTML='';
-  cur.listings.forEach((l,i)=>{
+  cur.listings.forEach(l=>{
     const d=document.createElement('div');d.className='subcard';
     d.innerHTML=`<button class="del" onclick="delListing('${l.id}')">×</button>
-      <div class="two"><div class="field"><label>날짜</label><input value="${l.date||''}" data-lk="date" data-li="${l.id}" placeholder="2024-08"></div>
-      <div class="field"><label>매가(만원)</label><input value="${l.price||''}" inputmode="decimal" data-lk="price" data-li="${l.id}"></div></div>
-      <div class="field"><label>구조</label><input value="${l.structure||''}" data-lk="structure" data-li="${l.id}" placeholder="예: 방3 화2, 판상형"></div>
-      <div class="field"><label>특징/매도자 상황</label><textarea data-lk="seller" data-li="${l.id}">${l.seller||''}</textarea></div>
-      <div class="field"><label>내 생각</label><textarea data-lk="thought" data-li="${l.id}">${l.thought||''}</textarea></div>`;
+      <div class="two"><div class="field"><label>날짜</label><input value="${esc(l.date)}" data-lk="date" data-li="${l.id}" placeholder="2024-08"></div>
+      <div class="field"><label>매가(만원)</label><input value="${esc(l.price)}" inputmode="decimal" data-lk="price" data-li="${l.id}"></div></div>
+      <div class="field"><label>구조</label><input value="${esc(l.structure)}" data-lk="structure" data-li="${l.id}" placeholder="예: 방3 화2, 판상형"></div>
+      <div class="field"><label>특징/매도자 상황</label><textarea data-lk="seller" data-li="${l.id}">${esc(l.seller)}</textarea></div>
+      <div class="field"><label>내 생각</label><textarea data-lk="thought" data-li="${l.id}">${esc(l.thought)}</textarea></div>`;
     w.appendChild(d);
   });
   w.querySelectorAll('[data-li]').forEach(el=>el.oninput=()=>{const o=cur.listings.find(x=>x.id===el.dataset.li);if(o)o[el.dataset.lk]=el.value;});
@@ -464,9 +870,9 @@ function renderTracks(){
     const pp=pyeongPrice(t.sale,cur.pyeong),ra=jeonseRatio(t.sale,t.jeonse);
     const d=document.createElement('div');d.className='subcard';
     d.innerHTML=`<button class="del" onclick="delTrack('${t.id}')">×</button>
-      <div class="field"><label>시점</label><input value="${t.label||''}" data-tk="label" data-ti="${t.id}" placeholder="예: 22년 8월"></div>
-      <div class="two"><div class="field"><label>매매(만원)</label><input value="${t.sale||''}" inputmode="decimal" data-tk="sale" data-ti="${t.id}"></div>
-      <div class="field"><label>전세(만원)</label><input value="${t.jeonse||''}" inputmode="decimal" data-tk="jeonse" data-ti="${t.id}"></div></div>
+      <div class="field"><label>시점</label><input value="${esc(t.label)}" data-tk="label" data-ti="${t.id}" placeholder="예: 22년 8월"></div>
+      <div class="two"><div class="field"><label>매매(만원)</label><input value="${esc(t.sale)}" inputmode="decimal" data-tk="sale" data-ti="${t.id}"></div>
+      <div class="field"><label>전세(만원)</label><input value="${esc(t.jeonse)}" inputmode="decimal" data-tk="jeonse" data-ti="${t.id}"></div></div>
       <div class="calc">평단가 <b>${pp?pp.toFixed(0):'-'}</b> · 전세가율 <b>${ra?ra.toFixed(0)+'%':'-'}</b></div>`;
     w.appendChild(d);
   });
@@ -483,9 +889,9 @@ function renderInterviews(){
   cur.interviews.forEach(t=>{
     const d=document.createElement('div');d.className='subcard';
     d.innerHTML=`<button class="del" onclick="delInterview('${t.id}')">×</button>
-      <div class="two"><div class="field"><label>대상</label><input value="${t.target||''}" data-vk="target" data-vi="${t.id}" placeholder="입주민/중개소/경비"></div>
-      <div class="field"><label>날짜</label><input value="${t.date||''}" data-vk="date" data-vi="${t.id}" placeholder="2026-07-30"></div></div>
-      <div class="field"><label>내용</label><textarea data-vk="content" data-vi="${t.id}" style="min-height:90px">${t.content||''}</textarea></div>`;
+      <div class="two"><div class="field"><label>대상</label><input value="${esc(t.target)}" data-vk="target" data-vi="${t.id}" placeholder="입주민/중개소/경비"></div>
+      <div class="field"><label>날짜</label><input value="${esc(t.date)}" data-vk="date" data-vi="${t.id}" placeholder="2026-07-30"></div></div>
+      <div class="field"><label>내용</label><textarea data-vk="content" data-vi="${t.id}" style="min-height:90px">${esc(t.content)}</textarea></div>`;
     w.appendChild(d);
   });
   w.querySelectorAll('[data-vi]').forEach(el=>el.oninput=()=>{const o=cur.interviews.find(x=>x.id===el.dataset.vi);if(o)o[el.dataset.vk]=el.value;});
@@ -513,11 +919,10 @@ const CHECKLIST=[
 function renderChecklist(){
   const w=$('#chkWrap');if(!w)return;
   cur.checklist=cur.checklist||{};
-  let lastCat='';let html='';
+  let lastCat='',html='';
   CHECKLIST.forEach(([cat,txt],i)=>{
     if(cat!==lastCat){html+=`<div style="color:var(--accent);font-size:12px;margin:12px 0 4px;font-weight:700">${cat}</div>`;lastCat=cat;}
-    const on=cur.checklist['c'+i]?'checked':'';
-    html+=`<label class="chkline"><input type="checkbox" ${on} onchange="cur.checklist['c${i}']=this.checked"><span>${txt}</span></label>`;
+    html+=`<label class="chkline"><input type="checkbox" ${cur.checklist['c'+i]?'checked':''} onchange="cur.checklist['c${i}']=this.checked"><span>${txt}</span></label>`;
   });
   w.innerHTML=html;
 }
@@ -558,16 +963,31 @@ function openViewer(type,url){$('#viewerBody').innerHTML=type==='video'?`<video 
 function closeViewer(){$('#viewer').classList.remove('open');$('#viewerBody').innerHTML='';}
 
 /* ----- save / delete ----- */
-async function saveRecord(){
-  // pull latest bound values already in cur; ensure code
-  if(!cur.code)cur.code=makeCode(cur.sido);
+async function persist(){
   cur.updatedAt=Date.now();
   const idx=RECORDS.findIndex(r=>r.id===cur.id);
-  const clean=JSON.parse(JSON.stringify(cur));delete clean._isNew;
+  const clean=JSON.parse(JSON.stringify(cur));
   await idbPut('records',clean);
   if(idx>=0)RECORDS[idx]=clean;else RECORDS.push(clean);
+  refreshPins();renderList();
   toast('저장되었습니다');
-  closeEditor();renderList();
+  closeEditor();
+}
+async function saveRecord(){
+  if(!cur)return;
+  if(!cur.code)cur.code=makeCode(cur.sido);
+  // 위치가 없으면 주소로 한 번 자동 조회 후 저장
+  const addr=(cur.road||'').trim()||(cur.jibun||'').trim();
+  if((!cur.lat||!cur.lng)&&addr&&geocoder){
+    geocoder.addressSearch(addr,(res,status)=>{
+      if(status===kakao.maps.services.Status.OK&&res[0]){
+        cur.lat=parseFloat(res[0].y);cur.lng=parseFloat(res[0].x);
+      }
+      persist();
+    });
+    return;
+  }
+  persist();
 }
 async function deleteRecord(){
   if(!cur)return;
@@ -575,7 +995,7 @@ async function deleteRecord(){
   for(const id of [...(cur.photos||[]),...(cur.videos||[])])await idbDel('media',id);
   await idbDel('records',cur.id);
   RECORDS=RECORDS.filter(r=>r.id!==cur.id);
-  closeEditor();renderList();toast('삭제되었습니다');
+  closeEditor();refreshPins();renderList();toast('삭제되었습니다');
 }
 
 /* ============================ BACKUP ============================ */
@@ -608,13 +1028,12 @@ function importBackup(){
       if(!confirm('현재 데이터에 백업을 병합합니다. 계속할까요?'))return;
       for(const m of (data.media||[]))await idbPut('media',{id:m.id,recordId:m.recordId,type:m.type,name:m.name,blob:dataURLtoBlob(m.data),ts:Date.now()});
       for(const r of data.records){await idbPut('records',r);if(!RECORDS.find(x=>x.id===r.id))RECORDS.push(r);}
-      renderList();toast('복원 완료: '+data.records.length+'건');
+      renderList();refreshPins();toast('복원 완료: '+data.records.length+'건');
     }catch(err){alert('백업 파일을 읽을 수 없습니다.');}
   };
   inp.click();
 }
 
-/* service worker (오프라인) — 호스팅 시 sw.js가 있으면 등록 */
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
 </body>
