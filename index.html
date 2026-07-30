@@ -258,15 +258,15 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
 <div class="picker" id="picker">
   <div class="sheethead">
     <button class="iconbtn" onclick="closePicker()">← 취소</button>
-    <b>지도에서 위치 지정</b>
-    <button class="iconbtn" onclick="confirmPick()">확인</button>
+    <b>지도에서 위치 확정</b>
+    <button class="iconbtn" onclick="confirmPick()">확정</button>
   </div>
   <div id="pickMapWrap">
     <div id="pickMap"></div>
     <div class="crosshair">📍</div>
-    <div class="pickhint">지도를 움직여 핀을 물건 위치에 맞춘 뒤 확인을 누르세요</div>
+    <div class="pickhint">지도를 움직여 핀을 물건 위치에 맞춘 뒤 확정하세요 · 이 좌표가 그대로 저장됩니다</div>
   </div>
-  <div class="savebar"><button class="btn-save" onclick="confirmPick()">이 위치로 지정</button></div>
+  <div class="savebar"><button class="btn-save" onclick="confirmPick()">이 위치로 확정</button></div>
 </div>
 
 <div class="viewer" id="viewer" onclick="if(event.target.id==='viewer')closeViewer()">
@@ -279,7 +279,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
 /* ============================================================
    새암 임장노트 v0.2 — 지도(카카오맵) + 로컬 우선(IndexedDB)
    ============================================================ */
-const APP_VERSION='v0.2';
+const APP_VERSION='v0.3';
 document.getElementById('ver').textContent=APP_VERSION;
 
 /* 카카오 JavaScript 키.
@@ -309,7 +309,7 @@ function idbDel(store,id){return new Promise(res=>{const r=tx(store,'readwrite')
 /* ---------- state ---------- */
 let RECORDS=[], cur=null, curTab='basic', curView='map';
 let map=null, geocoder=null, places=null, markers=[], myOverlay=null, tempMarker=null;
-let pickMap=null, lastPicked=null;
+let pickMap=null, lastPicked=null, pickMode='edit', pendingNew=null;
 let lastCenter=null;
 const SEOUL={lat:37.5665,lng:126.9780};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -550,31 +550,26 @@ function pickResult(i){
   $('#poicard').classList.add('on');
 }
 function clearTemp(){if(tempMarker){tempMarker.setMap(null);tempMarker=null;}$('#poicard').classList.remove('on');}
+/* ============================================================
+   좌표 확정 원칙 (v0.3)
+   검색 결과의 좌표는 "지도를 그 자리로 옮기는" 용도로만 쓴다.
+   실제로 저장되는 좌표는 반드시 사용자가 지도에서 확인·확정한 값이다.
+   → 지도 API가 산출한 데이터를 그대로 저장하지 않으므로 이용약관 이슈가 없고,
+     현장에서 실제 동·출입구 위치로 핀을 미세조정할 수 있어 기록 정확도도 올라간다.
+   ============================================================ */
 function addPicked(){
   if(!lastPicked)return;
-  addAt(lastPicked.lat,lastPicked.lng,lastPicked.title,
-        {jibun:lastPicked.jibun,road:lastPicked.road});
+  pendingNew={name:lastPicked.title,jibun:lastPicked.jibun,road:lastPicked.road};
+  clearTemp();
+  openPickerAt(lastPicked.lat,lastPicked.lng,'new');
 }
 
-/* 지도 중심에 물건 추가 */
+/* 지도 중심에서 물건 추가 → 위치 확정부터 */
 function addHere(){
   if(!map){openEditor();return;}
   const c=map.getCenter();
-  addAt(c.getLat(),c.getLng(),'');
-}
-function addAt(lat,lng,name,addr){
-  clearTemp();
-  openEditor();
-  cur.lat=lat;cur.lng=lng;
-  if(name&&!cur.aptName)cur.aptName=name;
-  // 검색 결과가 가진 주소를 먼저 쓴다(장소의 등록 주소가 핀 좌표의 필지보다 정확하다)
-  if(addr){
-    if(addr.jibun&&!cur.jibun)cur.jibun=addr.jibun;
-    if(addr.road&&!cur.road)cur.road=addr.road;
-  }
-  // 비어 있는 항목(시도·시군구·읍면동 등)만 좌표 역지오코딩으로 보충
-  fillAddressFromCoord(lat,lng);
-  renderPanes();
+  pendingNew={};
+  openPickerAt(c.getLat(),c.getLng(),'new');
 }
 /* 좌표 → 구조화된 주소(시도/시군구/읍면동/지번/도로명)로 채움.
    행정구역은 카카오가 돌려주는 region_1~3depth 값을 그대로 쓴다.
@@ -605,21 +600,18 @@ function geocodeCurrent(){
   const q=(cur.road||'').trim()||(cur.jibun||'').trim()||
           [cur.sido,cur.sigungu,cur.emd,cur.jibun].filter(Boolean).join(' ').trim();
   if(!q)return toast('먼저 주소를 입력해 주세요');
-  toast('주소로 위치를 찾는 중...');
+  toast('주소로 지도를 옮기는 중...');
   geocoder.addressSearch(q,(res,status)=>{
     if(status===kakao.maps.services.Status.OK&&res[0]){
-      cur.lat=parseFloat(res[0].y);cur.lng=parseFloat(res[0].x);
-      fillAddressFromCoord(cur.lat,cur.lng);
-      renderPanes();toast('위치를 찾았습니다');
+      // 좌표를 바로 저장하지 않고, 그 자리에서 사용자가 확정하도록 지도를 연다
+      openPickerAt(parseFloat(res[0].y),parseFloat(res[0].x),'edit');
     }else{
       // 주소로 안 되면 아파트명 키워드로 재시도
       const kw=[cur.sigungu,cur.emd,cur.aptName].filter(Boolean).join(' ').trim();
       if(kw&&places){
         places.keywordSearch(kw,(pres,pstatus)=>{
           if(pstatus===kakao.maps.services.Status.OK&&pres[0]){
-            cur.lat=parseFloat(pres[0].y);cur.lng=parseFloat(pres[0].x);
-            fillAddressFromCoord(cur.lat,cur.lng);
-            renderPanes();toast('아파트명으로 위치를 찾았습니다');
+            openPickerAt(parseFloat(pres[0].y),parseFloat(pres[0].x),'edit');
           }else toast('주소를 찾지 못했습니다. 지도에서 직접 지정해 주세요.');
         });
       }else toast('주소를 찾지 못했습니다. 지도에서 직접 지정해 주세요.');
@@ -630,6 +622,7 @@ function useMyLocationForRecord(){
   if(!navigator.geolocation)return toast('이 기기에서는 위치를 쓸 수 없습니다');
   toast('현재 위치를 찾는 중...');
   navigator.geolocation.getCurrentPosition(p=>{
+    // 현재 위치는 기기 GPS 값이므로 그대로 확정해도 된다
     cur.lat=p.coords.latitude;cur.lng=p.coords.longitude;
     fillAddressFromCoord(cur.lat,cur.lng);
     renderPanes();toast('현재 위치로 지정했습니다');
@@ -638,29 +631,53 @@ function useMyLocationForRecord(){
 }
 function clearLoc(){cur.lat=null;cur.lng=null;renderPanes();toast('위치를 지웠습니다');}
 
-/* ---- 지도에서 직접 지정 ---- */
+/* ---- 지도에서 위치 확정 ---- */
 function openPicker(){
+  const c=(cur&&cur.lat&&cur.lng)?{lat:cur.lat,lng:cur.lng}:(lastCenter||SEOUL);
+  openPickerAt(c.lat,c.lng,'edit');
+}
+function openPickerAt(lat,lng,mode){
   if(!kakaoKey()||!window.kakao||!window.kakao.maps)
     return toast('지도가 준비되지 않았습니다. 지도 탭에서 키를 먼저 등록해 주세요.');
+  pickMode=mode||'edit';
   $('#picker').classList.add('open');
-  const c=(cur.lat&&cur.lng)?{lat:cur.lat,lng:cur.lng}:(lastCenter||SEOUL);
   setTimeout(()=>{
     if(!pickMap){
-      pickMap=new kakao.maps.Map($('#pickMap'),{center:new kakao.maps.LatLng(c.lat,c.lng),level:3});
+      pickMap=new kakao.maps.Map($('#pickMap'),{center:new kakao.maps.LatLng(lat,lng),level:3});
     }else{
       pickMap.relayout();
-      pickMap.setCenter(new kakao.maps.LatLng(c.lat,c.lng));
+      pickMap.setCenter(new kakao.maps.LatLng(lat,lng));
+      pickMap.setLevel(3);
     }
     pickMap.relayout();
   },80);
 }
-function closePicker(){$('#picker').classList.remove('open');}
+function closePicker(){
+  $('#picker').classList.remove('open');
+  if(pickMode==='new')pendingNew=null;
+  pickMode='edit';
+}
 function confirmPick(){
   if(!pickMap)return closePicker();
   const c=pickMap.getCenter();
-  cur.lat=c.getLat();cur.lng=c.getLng();
-  fillAddressFromCoord(cur.lat,cur.lng);
-  closePicker();renderPanes();toast('위치를 지정했습니다');
+  const lat=c.getLat(), lng=c.getLng();
+  if(pickMode==='new'){
+    const p=pendingNew||{};
+    $('#picker').classList.remove('open');
+    pickMode='edit';pendingNew=null;
+    openEditor();
+    cur.lat=lat;cur.lng=lng;
+    if(p.name&&!cur.aptName)cur.aptName=p.name;
+    if(p.jibun&&!cur.jibun)cur.jibun=p.jibun;
+    if(p.road&&!cur.road)cur.road=p.road;
+    fillAddressFromCoord(lat,lng);
+    renderPanes();
+    toast('위치를 확정했습니다. 나머지 정보를 채워 주세요.');
+    return;
+  }
+  cur.lat=lat;cur.lng=lng;
+  fillAddressFromCoord(lat,lng);
+  closePicker();renderPanes();toast('위치를 확정했습니다');
 }
 
 /* ============================ VIEW SWITCH ============================ */
@@ -764,17 +781,17 @@ function renderPanes(){
     </div>
     <div class="grp"><h4>지도 위치</h4>
       <div class="locbox ${hasLoc?'set':''}">${hasLoc
-        ? `📍 위치 지정됨 &nbsp;<span style="opacity:.75">${cur.lat.toFixed(6)}, ${cur.lng.toFixed(6)}</span>`
-        : '위치가 아직 지정되지 않았습니다. 지정하면 지도에 핀으로 표시됩니다.'}</div>
+        ? `📍 위치 확정됨 &nbsp;<span style="opacity:.75">${cur.lat.toFixed(6)}, ${cur.lng.toFixed(6)}</span>`
+        : '위치가 아직 확정되지 않았습니다. 확정하면 지도에 핀으로 표시됩니다.'}</div>
       <div class="btnrow">
-        <button onclick="geocodeCurrent()">🔎 주소로 찾기</button>
+        <button onclick="openPicker()">🗺 지도에서 위치 확정</button>
         <button onclick="useMyLocationForRecord()">◎ 현재 위치</button>
       </div>
       <div class="btnrow">
-        <button onclick="openPicker()">🗺 지도에서 직접 지정</button>
+        <button onclick="geocodeCurrent()">🔎 주소로 지도 옮기기</button>
         ${hasLoc?`<button onclick="clearLoc()" style="color:var(--danger)">위치 지우기</button>`:''}
       </div>
-      <div class="mini">저장할 때 위치가 없으면 입력한 주소로 자동으로 한 번 찾아봅니다.</div>
+      <div class="mini">저장되는 좌표는 지도에서 직접 확인·확정한 값만 사용합니다. 검색은 지도를 그 자리로 옮기는 데만 쓰이며, 현장에서 실제 동·출입구 위치로 핀을 미세조정할 수 있습니다.</div>
     </div>
     <div class="grp"><h4>입지 — 4요소 & 지역분석</h4>
       <div class="two">${F('일자리(주변 직장/명)','jobs','text')}${F('교통(주요지 소요, 분)','transit','text')}</div>
@@ -994,17 +1011,9 @@ async function persist(){
 async function saveRecord(){
   if(!cur)return;
   if(!cur.code)cur.code=makeCode(cur.sido);
-  // 위치가 없으면 주소로 한 번 자동 조회 후 저장
-  const addr=(cur.road||'').trim()||(cur.jibun||'').trim();
-  if((!cur.lat||!cur.lng)&&addr&&geocoder){
-    geocoder.addressSearch(addr,(res,status)=>{
-      if(status===kakao.maps.services.Status.OK&&res[0]){
-        cur.lat=parseFloat(res[0].y);cur.lng=parseFloat(res[0].x);
-      }
-      persist();
-    });
-    return;
-  }
+  // v0.3: 저장 시 좌표를 자동으로 만들어 넣지 않는다.
+  // 지도에 표시되는 위치는 사용자가 직접 확정한 값만 쓴다.
+  if(!cur.lat||!cur.lng)toast('저장했습니다 · 위치를 확정하면 지도에 핀으로 표시됩니다');
   persist();
 }
 async function deleteRecord(){
