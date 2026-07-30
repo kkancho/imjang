@@ -503,12 +503,14 @@ function doMapSearch(){
   geocoder.addressSearch(q,(res,status)=>{
     if(status===kakao.maps.services.Status.OK){
       res.slice(0,5).forEach(a=>out.push({kind:'addr',title:a.road_address?a.road_address.address_name:a.address_name,
-        sub:a.address_name,lat:parseFloat(a.y),lng:parseFloat(a.x)}));
+        sub:a.address_name,lat:parseFloat(a.y),lng:parseFloat(a.x),
+        jibun:a.address_name||'',road:a.road_address?a.road_address.address_name:''}));
     }
     places.keywordSearch(q,(pres,pstatus)=>{
       if(pstatus===kakao.maps.services.Status.OK){
         pres.slice(0,7).forEach(p=>out.push({kind:'place',title:p.place_name,
-          sub:p.road_address_name||p.address_name,lat:parseFloat(p.y),lng:parseFloat(p.x)}));
+          sub:p.road_address_name||p.address_name,lat:parseFloat(p.y),lng:parseFloat(p.x),
+          jibun:p.address_name||'',road:p.road_address_name||''}));
       }
       renderResults(out,q);
     });
@@ -548,7 +550,11 @@ function pickResult(i){
   $('#poicard').classList.add('on');
 }
 function clearTemp(){if(tempMarker){tempMarker.setMap(null);tempMarker=null;}$('#poicard').classList.remove('on');}
-function addPicked(){if(lastPicked)addAt(lastPicked.lat,lastPicked.lng,lastPicked.title);}
+function addPicked(){
+  if(!lastPicked)return;
+  addAt(lastPicked.lat,lastPicked.lng,lastPicked.title,
+        {jibun:lastPicked.jibun,road:lastPicked.road});
+}
 
 /* 지도 중심에 물건 추가 */
 function addHere(){
@@ -556,11 +562,17 @@ function addHere(){
   const c=map.getCenter();
   addAt(c.getLat(),c.getLng(),'');
 }
-function addAt(lat,lng,name){
+function addAt(lat,lng,name,addr){
   clearTemp();
   openEditor();
   cur.lat=lat;cur.lng=lng;
   if(name&&!cur.aptName)cur.aptName=name;
+  // 검색 결과가 가진 주소를 먼저 쓴다(장소의 등록 주소가 핀 좌표의 필지보다 정확하다)
+  if(addr){
+    if(addr.jibun&&!cur.jibun)cur.jibun=addr.jibun;
+    if(addr.road&&!cur.road)cur.road=addr.road;
+  }
+  // 비어 있는 항목(시도·시군구·읍면동 등)만 좌표 역지오코딩으로 보충
   fillAddressFromCoord(lat,lng);
   renderPanes();
 }
