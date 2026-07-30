@@ -309,7 +309,7 @@ function idbDel(store,id){return new Promise(res=>{const r=tx(store,'readwrite')
 /* ---------- state ---------- */
 let RECORDS=[], cur=null, curTab='basic', curView='map';
 let map=null, geocoder=null, places=null, markers=[], myOverlay=null, tempMarker=null;
-let pickMap=null, pickTarget=null;
+let pickMap=null, lastPicked=null;
 let lastCenter=null;
 const SEOUL={lat:37.5665,lng:126.9780};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -536,53 +536,55 @@ function pickResult(i){
   map.setLevel(3);map.setCenter(ll);
   if(tempMarker)tempMarker.setMap(null);
   tempMarker=new kakao.maps.Marker({position:ll,map:map,zIndex:5});
+  lastPicked=r;
   $('#poicard').innerHTML=`<button class="x" onclick="clearTemp()">×</button>
     <span class="code">검색 위치</span>
     <h3>${esc(r.title)}</h3>
     <div class="addr">${esc(r.sub||'')}</div>
     <div class="acts">
       <button class="sec" onclick="clearTemp()">닫기</button>
-      <button class="pri" onclick="addAt(${r.lat},${r.lng},'${esc(r.sub||'').replace(/'/g,"\\'")}','${esc(r.title).replace(/'/g,"\\'")}')">여기에 물건 추가</button>
+      <button class="pri" onclick="addPicked()">여기에 물건 추가</button>
     </div>`;
   $('#poicard').classList.add('on');
 }
 function clearTemp(){if(tempMarker){tempMarker.setMap(null);tempMarker=null;}$('#poicard').classList.remove('on');}
+function addPicked(){if(lastPicked)addAt(lastPicked.lat,lastPicked.lng,lastPicked.title);}
 
 /* 지도 중심에 물건 추가 */
 function addHere(){
   if(!map){openEditor();return;}
   const c=map.getCenter();
-  addAt(c.getLat(),c.getLng(),'','');
+  addAt(c.getLat(),c.getLng(),'');
 }
-function addAt(lat,lng,addr,name){
+function addAt(lat,lng,name){
   clearTemp();
   openEditor();
   cur.lat=lat;cur.lng=lng;
   if(name&&!cur.aptName)cur.aptName=name;
-  if(addr)applyAddressString(addr);
-  // 좌표 → 주소 자동 채움
-  if(geocoder&&!addr){
-    geocoder.coord2Address(lng,lat,(res,status)=>{
-      if(status===kakao.maps.services.Status.OK&&res[0]){
-        const a=res[0];
-        const road=a.road_address?a.road_address.address_name:'';
-        const jib=a.address?a.address.address_name:'';
-        if(road&&!cur.road)cur.road=road;
-        if(jib&&!cur.jibun)cur.jibun=jib;
-        applyAddressString(jib||road);
-        if(curTab==='basic')renderPanes();
-      }
-    });
-  }
+  fillAddressFromCoord(lat,lng);
   renderPanes();
 }
-function applyAddressString(s){
-  if(!s)return;
-  const p=s.split(/\s+/);
-  if(p[0]&&!cur.sido)cur.sido=p[0].replace('특별시','').replace('광역시','').replace('특별자치시','').replace('특별자치도','');
-  if(p[1]&&!cur.sigungu)cur.sigungu=p[1];
-  if(p[2]&&!cur.emd)cur.emd=p[2];
-  if(!cur.jibun)cur.jibun=s;
+/* 좌표 → 구조화된 주소(시도/시군구/읍면동/지번/도로명)로 채움.
+   행정구역은 카카오가 돌려주는 region_1~3depth 값을 그대로 쓴다.
+   (도로명주소를 공백으로 쪼개면 읍면동 자리에 도로명이 들어가므로 쓰지 않는다) */
+function stripSido(s){
+  return String(s||'').replace('특별자치시','').replace('특별자치도','')
+    .replace('특별시','').replace('광역시','').trim();
+}
+function fillAddressFromCoord(lat,lng){
+  if(!geocoder)return;
+  geocoder.coord2Address(lng,lat,(res,status)=>{
+    if(status!==kakao.maps.services.Status.OK||!res[0]||!cur)return;
+    const a=res[0].address, r=res[0].road_address, src=a||r;
+    if(src){
+      if(!cur.sido)cur.sido=stripSido(src.region_1depth_name);
+      if(!cur.sigungu)cur.sigungu=src.region_2depth_name||'';
+      if(!cur.emd)cur.emd=src.region_3depth_name||'';
+    }
+    if(a&&a.address_name&&!cur.jibun)cur.jibun=a.address_name;
+    if(r&&r.address_name&&!cur.road)cur.road=r.address_name;
+    if(curTab==='basic')renderPanes();
+  });
 }
 
 /* ---- 주소로 좌표 찾기 (편집 화면) ---- */
@@ -595,6 +597,7 @@ function geocodeCurrent(){
   geocoder.addressSearch(q,(res,status)=>{
     if(status===kakao.maps.services.Status.OK&&res[0]){
       cur.lat=parseFloat(res[0].y);cur.lng=parseFloat(res[0].x);
+      fillAddressFromCoord(cur.lat,cur.lng);
       renderPanes();toast('위치를 찾았습니다');
     }else{
       // 주소로 안 되면 아파트명 키워드로 재시도
@@ -603,6 +606,7 @@ function geocodeCurrent(){
         places.keywordSearch(kw,(pres,pstatus)=>{
           if(pstatus===kakao.maps.services.Status.OK&&pres[0]){
             cur.lat=parseFloat(pres[0].y);cur.lng=parseFloat(pres[0].x);
+            fillAddressFromCoord(cur.lat,cur.lng);
             renderPanes();toast('아파트명으로 위치를 찾았습니다');
           }else toast('주소를 찾지 못했습니다. 지도에서 직접 지정해 주세요.');
         });
@@ -615,6 +619,7 @@ function useMyLocationForRecord(){
   toast('현재 위치를 찾는 중...');
   navigator.geolocation.getCurrentPosition(p=>{
     cur.lat=p.coords.latitude;cur.lng=p.coords.longitude;
+    fillAddressFromCoord(cur.lat,cur.lng);
     renderPanes();toast('현재 위치로 지정했습니다');
   },err=>toast(err.code===1?'위치 권한이 거부되어 있습니다':'위치를 찾지 못했습니다'),
   {enableHighAccuracy:true,timeout:8000});
@@ -642,6 +647,7 @@ function confirmPick(){
   if(!pickMap)return closePicker();
   const c=pickMap.getCenter();
   cur.lat=c.getLat();cur.lng=c.getLng();
+  fillAddressFromCoord(cur.lat,cur.lng);
   closePicker();renderPanes();toast('위치를 지정했습니다');
 }
 
