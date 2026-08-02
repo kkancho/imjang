@@ -124,6 +124,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
 .badge.g{border-color:#2f7a5a;color:#8fe0bd}
 .badge.p{border-color:#2f7dff;color:#9dc2ff}
 .badge.a{border-color:#b98a2f;color:var(--gold)}
+.badge.d{border-color:var(--danger);color:#ffb3b3;font-weight:700}
 .rank{position:absolute;top:11px;right:11px;background:var(--gold);color:#3a2c00;font-weight:800;
   border-radius:8px;padding:2px 8px;font-size:12px}
 .empty{text-align:center;color:var(--sub);padding:56px 20px}
@@ -267,7 +268,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
   <div class="view" id="listView">
     <div class="listbody">
       <div class="search">
-        <input id="q" type="search" placeholder="코드·아파트명·지역 검색 (예: SEO-0001)" oninput="renderList()">
+        <input id="q" type="search" placeholder="코드·아파트명·지역·사건번호 검색" oninput="renderList()">
       </div>
       <div class="stats">
         <div class="stat"><b id="stTotal">0</b><span>등록 물건</span></div>
@@ -335,7 +336,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
    - 편집 화면 공공데이터 자동채움(직접 입력값은 덮어쓰지 않음)
    - 저장되는 좌표는 사용자가 지도에서 확정한 값만 사용
    ============================================================ */
-const APP_VERSION='v0.5';
+const APP_VERSION='v0.6';
 document.getElementById('ver').textContent=APP_VERSION;
 
 const KAKAO_KEY_BUILTIN='dd45c6824d4fce8d61b2449172b73768';
@@ -401,7 +402,7 @@ function blank(){return{
   subway:'',trait:'',moveIn:'',unsold:'',jobs:'',transit:'',amenity:'',nature:'',jimok:'',school:'',story:'',
   far:'',supply:'',exclusive:'',pyeong:'',households:'',parking:'',parkingPer:'',corridor:'',heat:'',
   sale:'',jeonse:'',areaPP:'',grade:'',ranking:'',
-  apprPrice:'',minPrice:'',failCount:'',takeover:'',
+  caseNo:'',bidDate:'',apprPrice:'',minPrice:'',failCount:'',takeover:'',
   listings:[],tracks:[],interviews:[],
   memo:'',checklist:{},photos:[],videos:[],auto:{}
 };}
@@ -701,7 +702,7 @@ function doMapSearch(){
   if(!map)return toast('지도가 아직 준비되지 않았습니다');
   const out=[];
   RECORDS.forEach(r=>{
-    const hay=[r.code,r.aptName,r.sido,r.sigungu,r.emd,r.jibun,r.road].join(' ').toLowerCase();
+    const hay=[r.code,r.aptName,r.sido,r.sigungu,r.emd,r.jibun,r.road,r.caseNo].join(' ').toLowerCase();
     if(hay.includes(q.toLowerCase()))out.push({kind:'saved',id:r.id,title:r.aptName||r.code,sub:fullAddr(r),lat:r.lat,lng:r.lng});
   });
   geocoder.addressSearch(q,(res,st)=>{
@@ -941,7 +942,7 @@ function setView(v){
 function renderList(){
   const q=($('#q').value||'').trim().toLowerCase();
   let arr=[...RECORDS].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  if(q)arr=arr.filter(r=>[r.code,r.aptName,r.sido,r.sigungu,r.emd,r.jibun,r.road,r.story].join(' ').toLowerCase().includes(q));
+  if(q)arr=arr.filter(r=>[r.code,r.aptName,r.sido,r.sigungu,r.emd,r.jibun,r.road,r.story,r.caseNo].join(' ').toLowerCase().includes(q));
   $('#stTotal').textContent=RECORDS.length;
   let photos=0,itv=0;RECORDS.forEach(r=>{photos+=(r.photos?.length||0)+(r.videos?.length||0);itv+=(r.interviews?.length||0);});
   $('#stPhoto').textContent=photos;$('#stItv').textContent=itv;
@@ -967,7 +968,9 @@ function renderList(){
         ${ratio?`<span class="badge g">전세가율 <b>${ratio.toFixed(0)}%</b></span>`:''}
         ${pp?`<span class="badge">평단 <b>${pp.toFixed(0)}</b></span>`:''}
         ${r.minPrice?`<span class="badge a">경매 최저 <b>${comma(r.minPrice)}</b>${num(r.failCount)?` · 유찰 ${num(r.failCount)}회`:''}</span>`:''}
-        ${(!r.minPrice&&r.takeover)?`<span class="badge a">경매</span>`:''}
+        ${(!r.minPrice&&(r.takeover||r.caseNo))?`<span class="badge a">경매</span>`:''}
+        ${r.bidDate?`<span class="badge ${ddays(r.bidDate)>=0?'d':'a'}">입찰 <b>${ddayText(r.bidDate)}</b></span>`:''}
+        ${r.caseNo?`<span class="badge a">${esc(r.caseNo)}</span>`:''}
         ${(r.photos?.length||r.videos?.length)?`<span class="badge">📷 ${(r.photos?.length||0)+(r.videos?.length||0)}</span>`:''}
       </div>`;
     el.appendChild(c);
@@ -1012,15 +1015,33 @@ function liveCalc(){
   const ab=document.getElementById('aucCalc');
   if(ab){
     const ap=num(cur.apprPrice), mp=num(cur.minPrice), py=num(cur.pyeong);
-    if(!ap&&!mp){ab.innerHTML='감정가와 최저가를 입력하면 최저가율이 자동 계산됩니다.';}
+    const dd=ddayText(cur.bidDate);
+    let s='';
+    if(!ap&&!mp)s='감정가와 최저가를 입력하면 최저가율이 자동 계산됩니다.';
     else{
       const rate=ap>0?(mp/ap*100):0, disc=ap-mp;
-      ab.innerHTML=`최저가율 <b>${rate?rate.toFixed(1)+'%':'-'}</b>`
+      s=`최저가율 <b>${rate?rate.toFixed(1)+'%':'-'}</b>`
         +(ap>0&&mp>0?` · 감정가 대비 <b>-${comma(Math.round(disc))} 만원</b>`:'')
         +(num(cur.failCount)?` · 유찰 <b>${num(cur.failCount)}회</b>`:'')
         +(py>0&&mp>0?` · 최저가 평단 <b>${(mp/py).toFixed(0)} 만원/평</b>`:'');
     }
+    if(dd)s=`입찰 <b>${dd}</b> · `+s;
+    ab.innerHTML=s;
   }
+}
+/* 입찰일까지 남은 기간 */
+function ddays(d){
+  if(!d)return null;
+  const t=new Date(String(d)+'T00:00:00');
+  if(isNaN(t.getTime()))return null;
+  const today=new Date(); today.setHours(0,0,0,0);
+  return Math.round((t-today)/86400000);
+}
+function ddayText(d){
+  const n=ddays(d);
+  if(n===null)return '';
+  if(n===0)return 'D-DAY';
+  return n>0?('D-'+n):('종료 '+(-n)+'일 경과');
 }
 function renderPanes(){
   const body=$('#sheetbody'); let html='';
@@ -1091,7 +1112,12 @@ function renderPanes(){
     </div>`;
   }
   else if(curTab==='auction'){
-    html=`<div class="grp"><h4>경매 정보</h4>
+    html=`<div class="grp"><h4>사건 정보</h4>
+      ${F('사건번호','caseNo','text','예: 2026타경12345')}
+      ${F('입찰일','bidDate','date')}
+      <div class="mini">사건번호는 나중에 법원경매정보에서 물건을 다시 찾을 때 쓰는 키입니다. 입찰일은 남은 기간이 D-day로 표시됩니다.</div>
+    </div>
+    <div class="grp"><h4>경매 금액</h4>
       <div class="calc" id="aucCalc"></div>
       <div class="two">${F('감정가(만원)','apprPrice','number','예: 50000')}${F('최저가(만원)','minPrice','number','예: 32000')}</div>
       ${F('유찰횟수','failCount','number','예: 2')}
