@@ -36,7 +36,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
 .view{flex:1;min-height:0;display:none;flex-direction:column;position:relative}
 .view.on{display:flex}
 /* ---------- MAP ---------- */
-#mapWrap{flex:1;min-height:0;position:relative}
+#mapWrap{flex:1;min-height:0;position:relative;overflow:hidden}
 #map{position:absolute;inset:0;background:var(--panel2)}
 .mapsearch{position:absolute;top:10px;left:10px;right:10px;z-index:6}
 .mapsearch .row{display:flex;gap:7px}
@@ -123,6 +123,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
 .badge b{color:var(--txt)}
 .badge.g{border-color:#2f7a5a;color:#8fe0bd}
 .badge.p{border-color:#2f7dff;color:#9dc2ff}
+.badge.a{border-color:#b98a2f;color:var(--gold)}
 .rank{position:absolute;top:11px;right:11px;background:var(--gold);color:#3a2c00;font-weight:800;
   border-radius:8px;padding:2px 8px;font-size:12px}
 .empty{text-align:center;color:var(--sub);padding:56px 20px}
@@ -334,7 +335,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
    - 편집 화면 공공데이터 자동채움(직접 입력값은 덮어쓰지 않음)
    - 저장되는 좌표는 사용자가 지도에서 확정한 값만 사용
    ============================================================ */
-const APP_VERSION='v0.4';
+const APP_VERSION='v0.5';
 document.getElementById('ver').textContent=APP_VERSION;
 
 const KAKAO_KEY_BUILTIN='dd45c6824d4fce8d61b2449172b73768';
@@ -400,10 +401,11 @@ function blank(){return{
   subway:'',trait:'',moveIn:'',unsold:'',jobs:'',transit:'',amenity:'',nature:'',jimok:'',school:'',story:'',
   far:'',supply:'',exclusive:'',pyeong:'',households:'',parking:'',parkingPer:'',corridor:'',heat:'',
   sale:'',jeonse:'',areaPP:'',grade:'',ranking:'',
+  apprPrice:'',minPrice:'',failCount:'',takeover:'',
   listings:[],tracks:[],interviews:[],
   memo:'',checklist:{},photos:[],videos:[],auto:{}
 };}
-const TABS=[['basic','기본·위치·입지'],['complex','단지'],['listing','매물'],['price','가격비교'],
+const TABS=[['basic','기본·위치·입지'],['complex','단지'],['listing','매물'],['price','가격비교'],['auction','경매'],
   ['track','시세트래킹'],['media','사진·영상'],['interview','인터뷰·메모'],['check','임장 체크리스트']];
 
 /* ============================ INIT ============================ */
@@ -964,6 +966,8 @@ function renderList(){
         ${r.jeonse?`<span class="badge">전세 <b>${comma(r.jeonse)}</b></span>`:''}
         ${ratio?`<span class="badge g">전세가율 <b>${ratio.toFixed(0)}%</b></span>`:''}
         ${pp?`<span class="badge">평단 <b>${pp.toFixed(0)}</b></span>`:''}
+        ${r.minPrice?`<span class="badge a">경매 최저 <b>${comma(r.minPrice)}</b>${num(r.failCount)?` · 유찰 ${num(r.failCount)}회`:''}</span>`:''}
+        ${(!r.minPrice&&r.takeover)?`<span class="badge a">경매</span>`:''}
         ${(r.photos?.length||r.videos?.length)?`<span class="badge">📷 ${(r.photos?.length||0)+(r.videos?.length||0)}</span>`:''}
       </div>`;
     el.appendChild(c);
@@ -1005,6 +1009,18 @@ function liveCalc(){
   const box=document.getElementById('priceCalc');
   if(box)box.innerHTML=`전세가율 <b>${r?r.toFixed(1)+'%':'-'}</b> · 물건 평단가 <b>${pp?pp.toFixed(0)+' 만원/평':'-'}</b>`+
     (num(cur.areaPP)?` · 지역대비 차익 <b>${gap>=0?'+':''}${gap.toFixed(0)} 만원/평 ${gap>=0?'(저평가)':'(고평가)'}</b>`:'');
+  const ab=document.getElementById('aucCalc');
+  if(ab){
+    const ap=num(cur.apprPrice), mp=num(cur.minPrice), py=num(cur.pyeong);
+    if(!ap&&!mp){ab.innerHTML='감정가와 최저가를 입력하면 최저가율이 자동 계산됩니다.';}
+    else{
+      const rate=ap>0?(mp/ap*100):0, disc=ap-mp;
+      ab.innerHTML=`최저가율 <b>${rate?rate.toFixed(1)+'%':'-'}</b>`
+        +(ap>0&&mp>0?` · 감정가 대비 <b>-${comma(Math.round(disc))} 만원</b>`:'')
+        +(num(cur.failCount)?` · 유찰 <b>${num(cur.failCount)}회</b>`:'')
+        +(py>0&&mp>0?` · 최저가 평단 <b>${(mp/py).toFixed(0)} 만원/평</b>`:'');
+    }
+  }
 }
 function renderPanes(){
   const body=$('#sheetbody'); let html='';
@@ -1074,6 +1090,19 @@ function renderPanes(){
       ${F('지역 내 급지 평가','grade','select','',['1급지','2급지','3급지','4급지','기타'])}
     </div>`;
   }
+  else if(curTab==='auction'){
+    html=`<div class="grp"><h4>경매 정보</h4>
+      <div class="calc" id="aucCalc"></div>
+      <div class="two">${F('감정가(만원)','apprPrice','number','예: 50000')}${F('최저가(만원)','minPrice','number','예: 32000')}</div>
+      ${F('유찰횟수','failCount','number','예: 2')}
+      <div class="mini">최저가율 = 최저가 ÷ 감정가 × 100 · 유찰이 거듭될수록 최저가는 통상 20~30%씩 낮아집니다.</div>
+    </div>
+    <div class="grp"><h4>인수 권리</h4>
+      ${F('인수하는 권리','takeover','textarea','예: 선순위 임차인 보증금 1억(대항력 有), 유치권 신고 3천만원, 법정지상권 성립 여지 등')}
+      <div class="mini"><b>낙찰 후에도 사라지지 않고 낙찰자가 떠안는 권리</b>를 적습니다. 말소기준권리보다 앞선 선순위 임차인·전세권·지상권·가처분, 유치권, 법정지상권, 분묘기지권 등이 대상입니다.</div>
+      <div class="mini" style="color:var(--warn)">⚠ 권리분석에 필요한 등기부 갑구·을구와 선순위 임차인 정보는 <b>무료 공개 API가 없습니다.</b> 등기부등본·매각물건명세서·현황조사서·감정평가서를 직접 확인해 이 칸에 옮겨 적으셔야 하며, 최종 판단 전 전문가 검토를 권합니다.</div>
+    </div>`;
+  }
   else if(curTab==='track'){
     html=`<div class="grp"><h4>시세 트래킹 <span style="color:var(--sub);font-weight:400">(실거래가 기준)</span></h4>
       <div class="mini">가격비교 탭의 <b>실거래가 자동채움</b>을 누르면 월별 평균이 자동으로 쌓입니다.</div>
@@ -1099,7 +1128,7 @@ function renderPanes(){
       <div id="chkWrap"></div></div>`;
   }
   body.innerHTML=html; bindInputs(body);
-  if(curTab==='price')liveCalc();
+  if(curTab==='price'||curTab==='auction')liveCalc();
   if(curTab==='listing')renderListings();
   if(curTab==='track')renderTracks();
   if(curTab==='media')renderMedia();

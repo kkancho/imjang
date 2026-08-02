@@ -1,5 +1,5 @@
 /* 새암 임장노트 서비스워커 v2 — 오프라인 캐시 (동일 출처만, network-first) */
-const CACHE = 'saeam-imjang-v4';
+const CACHE = 'saeam-imjang-v5';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
