@@ -94,6 +94,11 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
 .keybox input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
   border-radius:9px;padding:10px;margin-top:9px;outline:none}
 .keybox button{width:100%;background:var(--accent);color:#04120b;border:none;border-radius:9px;padding:11px;font-weight:800;margin-top:8px;cursor:pointer}
+.keybox ol{margin:8px 0 0;padding-left:18px;line-height:1.75}
+.keybox ol li{margin-bottom:2px}
+.keybox a{color:var(--accent)}
+.keywarn{background:#3a2410;border-color:#7a4a12;color:#ffcf8a;animation:kwpulse 1.8s ease-in-out infinite}
+@keyframes kwpulse{0%,100%{opacity:1}50%{opacity:.55}}
 .mapnotice{position:absolute;inset:0;z-index:8;background:var(--bg);display:flex;flex-direction:column;
   align-items:center;justify-content:center;padding:26px;text-align:center;gap:12px}
 .mapnotice .big{font-size:40px}
@@ -228,6 +233,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
   <header>
     <div class="logo">새암 임장노트 <small id="ver">v0.4</small></div>
     <div class="spacer"></div>
+    <button class="iconbtn keywarn" id="keyWarn" onclick="openKeyGuide()" style="display:none">🔑 인증키 등록</button>
     <button class="iconbtn" onclick="openSettings()">⚙ 설정</button>
   </header>
 
@@ -336,7 +342,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
    - 편집 화면 공공데이터 자동채움(직접 입력값은 덮어쓰지 않음)
    - 저장되는 좌표는 사용자가 지도에서 확정한 값만 사용
    ============================================================ */
-const APP_VERSION='v0.7';
+const APP_VERSION='v0.8';
 document.getElementById('ver').textContent=APP_VERSION;
 
 const KAKAO_KEY_BUILTIN='dd45c6824d4fce8d61b2449172b73768';
@@ -413,7 +419,7 @@ const TABS=[['basic','기본·위치·입지'],['complex','단지'],['listing','
 (async function(){
   await openDB();
   RECORDS=await idbAll('records');
-  buildTabs(); renderList(); initMap();
+  buildTabs(); renderList(); syncKeyWarn(); initMap();
 })();
 
 /* ============================ MAP ============================ */
@@ -533,7 +539,7 @@ async function fetchDeals(lawd,ym,type){
   const url=`${API}${path}?serviceKey=${encodeURIComponent(key)}&LAWD_CD=${lawd}&DEAL_YMD=${ym}&numOfRows=1000&pageNo=1`;
   const res=await fetch(url);
   const txt=await res.text();
-  if(res.status===401||/SERVICE_KEY_IS_NOT_REGISTERED|Unauthorized/i.test(txt))throw new Error('BADKEY');
+  if(res.status===401||res.status===403||/SERVICE_KEY_IS_NOT_REGISTERED|SERVICE_ACCESS_DENIED|Unauthorized/i.test(txt))throw new Error('BADKEY');
   const items=xmlItems(txt).map(o=>({
     apt:(o.aptNm||o.offiNm||'').trim(),
     umd:(o.umdNm||'').trim(),
@@ -567,11 +573,9 @@ async function loadDeals(force){
     '<div class="mini">상단 <b>내 물건만</b> 칩을 다시 눌러 실거래 표시를 켤 수 있습니다.</div>');return;}
   if(!dataKey()){
     clearBubbles();
-    setSheet('공공데이터 실거래가','키 등록 필요',
-      `<div class="keybox"><b>공공데이터포털 인증키를 등록하면</b> 지도에 국토교통부 실거래가가 표시됩니다. 무료이며 심사가 없습니다.
-       <input id="dkIn" placeholder="일반 인증키(Decoding) 붙여넣기">
-       <button onclick="saveDataKey()">등록하고 불러오기</button></div>
-       <div class="mini">참고 · 공공데이터포털이 2026-07-29 19시 ~ 08-02 18시 전환 작업 중이라 이 기간에는 신규 키 발급이 제한됩니다. 기존 키는 정상 동작합니다.</div>`);
+    setSheet('실거래가가 표시되지 않습니다','인증키 미등록',keyGuideHTML());
+    $('#dsheet').classList.add('open');   /* 안내가 접혀서 안 보이던 문제 수정 (v0.8) */
+    syncKeyWarn();
     return;
   }
   const c=map.getCenter();
@@ -594,11 +598,55 @@ async function loadDeals(force){
     else setSheet('실거래 불러오기 실패',e.message||'','<div class="mini">잠시 후 다시 시도해 주세요.</div>');
   }
 }
-function saveDataKey(){
-  const el=$('#dkIn');if(!el)return;
-  const v=(el.value||'').trim();if(!v)return toast('인증키를 입력해 주세요');
+/* ---- 인증키 안내 · 검증 (v0.8) ---- */
+function keyGuideHTML(){
+  return `<div class="keybox">
+    <b>국토교통부 실거래가는 공공데이터포털 인증키가 있어야 불러옵니다.</b> 무료이고 심사 없이 즉시 승인됩니다.
+    <ol>
+      <li><a href="https://www.data.go.kr" target="_blank" rel="noopener">data.go.kr</a> 로그인 (회원가입 무료)</li>
+      <li>‘아파트 매매 실거래가 상세 자료’ 검색 → <b>활용신청</b> → 즉시 승인</li>
+      <li>‘아파트 전월세 실거래가’도 같은 방식으로 활용신청</li>
+      <li>마이페이지 → 오픈API → <b>일반 인증키(Decoding)</b> 복사</li>
+      <li>아래에 붙여넣고 등록</li>
+    </ol>
+    <input id="dkIn" placeholder="일반 인증키(Decoding) 붙여넣기">
+    <button onclick="saveDataKey()">등록하고 불러오기</button>
+    <div class="mini" style="margin-top:8px">Encoding 키(%2B·%3D 등이 섞인 형태)가 아니라 <b>Decoding</b> 키를 넣어야 합니다. 발급 직후에는 반영까지 최대 1시간이 걸릴 수 있습니다.</div>
+  </div>`;
+}
+function openKeyGuide(){
+  setView('map');
+  setSheet('실거래가가 표시되지 않습니다','인증키 미등록',keyGuideHTML());
+  $('#dsheet').classList.add('open');
+}
+function syncKeyWarn(){
+  const el=$('#keyWarn'); if(el) el.style.display = dataKey() ? 'none' : '';
+}
+/* 키가 실제로 동작하는지 확인한 뒤에만 저장한다 */
+async function verifyDataKey(v){
+  const url=`${API}RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade?serviceKey=${encodeURIComponent(v)}&LAWD_CD=11350&DEAL_YMD=${ymList(1)[0]}&numOfRows=1&pageNo=1`;
+  let txt='';
+  try{ const r=await fetch(url); txt=await r.text(); }
+  catch(e){ return {ok:false,msg:'네트워크 오류로 확인하지 못했습니다'}; }
+  if(/SERVICE_KEY_IS_NOT_REGISTERED/i.test(txt))return {ok:false,msg:'등록되지 않은 키입니다. Decoding 키인지, 활용신청이 승인됐는지 확인해 주세요'};
+  if(/SERVICE_ACCESS_DENIED|APPLICATION_ERROR/i.test(txt))return {ok:false,msg:'이 API에 대한 활용신청이 필요합니다'};
+  if(/LIMITED_NUMBER_OF_SERVICE_REQUESTS/i.test(txt))return {ok:false,msg:'일일 호출 한도를 초과했습니다'};
+  if(/<resultCode>0*0<\/resultCode>|<item>/i.test(txt))return {ok:true};
+  return {ok:false,msg:'응답을 해석하지 못했습니다. 잠시 후 다시 시도해 주세요'};
+}
+async function applyDataKey(v,btn){
+  if(!v)return toast('인증키를 입력해 주세요');
+  if(btn){btn.disabled=true;btn.textContent='확인 중…';}
+  const r=await verifyDataKey(v);
+  if(btn){btn.disabled=false;btn.textContent='등록하고 불러오기';}
+  if(!r.ok){toast(r.msg);return false;}
   localStorage.setItem('dataKey',v); dealCache={}; curLawd=null;
-  toast('인증키를 등록했습니다'); loadDeals(true);
+  syncKeyWarn(); toast('인증키가 확인되었습니다'); loadDeals(true);
+  return true;
+}
+function saveDataKey(ev){
+  const el=$('#dkIn');if(!el)return;
+  applyDataKey((el.value||'').trim(), (ev&&ev.target)||document.querySelector('.keybox button'));
 }
 /* 단지별 집계 → 지도 말풍선 */
 function aggregate(deals){
@@ -1417,7 +1465,8 @@ function openSettings(){
         <button onclick="settingsSaveKey()">저장</button>
         <button onclick="settingsClearKey()" style="color:var(--danger)">키 삭제</button>
       </div>
-      <div class="mini">공공데이터포털이 2026-07-29 19시 ~ 08-02 18시 전환 작업 중이라 이 기간에는 신규 키 발급이 제한됩니다.</div>
+      <div class="mini">발급 순서 · <a href="https://www.data.go.kr" target="_blank" rel="noopener" style="color:var(--accent)">data.go.kr</a> 로그인 → ‘아파트 매매 실거래가 상세 자료’ 활용신청(즉시 승인) → ‘아파트 전월세 실거래가’도 활용신청 → 마이페이지 · 오픈API에서 <b>일반 인증키(Decoding)</b> 복사.
+      Encoding 키가 아니라 Decoding 키여야 하며, 발급 직후 반영까지 최대 1시간이 걸릴 수 있습니다. 저장을 누르면 키가 실제로 동작하는지 먼저 확인합니다.</div>
     </div>
     <div class="grp"><h4>백업</h4>
       <div class="mini">기기에만 저장되므로 브라우저 기록을 지우면 함께 삭제됩니다. 주 1회 백업을 권합니다.</div>
@@ -1434,14 +1483,18 @@ function openSettings(){
   $('#settings').classList.add('open');
 }
 function closeSettings(){$('#settings').classList.remove('open');}
-function settingsSaveKey(){
+async function settingsSaveKey(){
   const v=($('#setKey').value||'').trim();
-  if(v)localStorage.setItem('dataKey',v); else localStorage.removeItem('dataKey');
-  dealCache={};curLawd=null;
-  toast(v?'인증키를 저장했습니다':'인증키를 삭제했습니다');
-  closeSettings(); loadDeals(true);
+  if(!v){localStorage.removeItem('dataKey');dealCache={};curLawd=null;syncKeyWarn();toast('인증키를 삭제했습니다');closeSettings();loadDeals(true);return;}
+  const btn=document.querySelector('#settingsBox .btnrow button');
+  if(btn){btn.disabled=true;btn.textContent='확인 중…';}
+  const r=await verifyDataKey(v);
+  if(btn){btn.disabled=false;btn.textContent='저장';}
+  if(!r.ok)return toast(r.msg);
+  localStorage.setItem('dataKey',v); dealCache={};curLawd=null; syncKeyWarn();
+  toast('인증키가 확인되었습니다'); closeSettings(); loadDeals(true);
 }
-function settingsClearKey(){localStorage.removeItem('dataKey');dealCache={};curLawd=null;toast('인증키를 삭제했습니다');closeSettings();loadDeals(true);}
+function settingsClearKey(){localStorage.removeItem('dataKey');dealCache={};curLawd=null;syncKeyWarn();toast('인증키를 삭제했습니다');closeSettings();loadDeals(true);}
 
 /* ============================ BACKUP ============================ */
 function blobToDataURL(b){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(b);});}
