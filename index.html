@@ -336,7 +336,7 @@ header{flex:0 0 auto;z-index:20;background:linear-gradient(180deg,#12211c,#12211
    - 편집 화면 공공데이터 자동채움(직접 입력값은 덮어쓰지 않음)
    - 저장되는 좌표는 사용자가 지도에서 확정한 값만 사용
    ============================================================ */
-const APP_VERSION='v0.6';
+const APP_VERSION='v0.7';
 document.getElementById('ver').textContent=APP_VERSION;
 
 const KAKAO_KEY_BUILTIN='dd45c6824d4fce8d61b2449172b73768';
@@ -401,7 +401,7 @@ function blank(){return{
   lat:null,lng:null,
   subway:'',trait:'',moveIn:'',unsold:'',jobs:'',transit:'',amenity:'',nature:'',jimok:'',school:'',story:'',
   far:'',supply:'',exclusive:'',pyeong:'',households:'',parking:'',parkingPer:'',corridor:'',heat:'',
-  sale:'',jeonse:'',areaPP:'',grade:'',ranking:'',
+  sale:'',jeonse:'',areaPP:'',grade:'',ranking:'',pubPrice:'',
   caseNo:'',bidDate:'',apprPrice:'',minPrice:'',failCount:'',takeover:'',
   listings:[],tracks:[],interviews:[],
   memo:'',checklist:{},photos:[],videos:[],auto:{}
@@ -838,39 +838,136 @@ function setAuto(field,val){
   if(String(cur[field]||'').trim()!=='')return false;   // 직접 입력값은 덮어쓰지 않는다
   cur[field]=String(val); cur.auto=cur.auto||{}; cur.auto[field]=1; return true;
 }
+function itemsOf(j){
+  const it=j?.response?.body?.items?.item ?? j?.response?.body?.item ?? j?.body?.items;
+  return Array.isArray(it)?it:(it?[it]:[]);
+}
+/* ---- K-apt 공동주택 기본정보 (복도식/계단식·난방방식 등) ---- */
+async function fetchKapt(key,bjdCode,aptName){
+  const list=await jsonApi(`${API}AptListService3/getLegaldongAptList3?serviceKey=${encodeURIComponent(key)}`
+    +`&bjdCode=${bjdCode}&numOfRows=200&pageNo=1&_type=json`);
+  const arr=itemsOf(list);
+  if(!arr.length)return null;
+  const nm=String(aptName||'').replace(/\s/g,'');
+  let hit=null;
+  if(nm)hit=arr.find(a=>{const n=String(a.kaptName||a.kaptNm||'').replace(/\s/g,'');
+    return n&&(n.includes(nm)||nm.includes(n));});
+  if(!hit)return {candidates:arr.map(a=>a.kaptName||a.kaptNm).filter(Boolean)};
+  const code=hit.kaptCode||hit.kaptcode;
+  if(!code)return null;
+  const b=await jsonApi(`${API}AptBasisInfoServiceV4/getAphusBassInfoV4?serviceKey=${encodeURIComponent(key)}`
+    +`&kaptCode=${encodeURIComponent(code)}&_type=json`);
+  const bi=itemsOf(b)[0]||b?.response?.body?.item||null;
+  return bi?{info:bi,name:hit.kaptName||hit.kaptNm}:null;
+}
 async function autofillComplex(){
   const key=dataKey(); if(!key)return toast('설정에서 공공데이터 인증키를 먼저 등록해 주세요');
   if(!cur.lat||!cur.lng)return toast('먼저 지도에서 위치를 확정해 주세요');
   const btn=$('#afComplex'); if(btn){btn.disabled=true;btn.textContent='불러오는 중…';}
-  let filled=0;
+  let filled=0; const src=[];
   try{
     const reg=await regionCodeOf(cur.lat,cur.lng);
     if(!reg)throw new Error('지역코드를 확인하지 못했습니다');
     const sigunguCd=reg.code.slice(0,5), bjdongCd=reg.code.slice(5,10);
     if(!cur.bjd)cur.bjd=reg.code;
+
+    /* 1) K-apt — 아파트만 있는 항목(복도유형·난방방식) */
+    try{
+      const k=await fetchKapt(key,reg.code,cur.aptName);
+      if(k&&k.info){
+        const i=k.info; let n=0;
+        if(setAuto('corridor',i.codeHallNm))n++;
+        if(setAuto('heat',i.codeHeatNm))n++;
+        if(setAuto('households',i.kaptdaCnt))n++;
+        if(i.kaptUsedate&&setAuto('moveIn',String(i.kaptUsedate).replace(/^(\d{4})(\d{2}).*$/,'$1-$2')))n++;
+        if(!cur.aptName&&(k.name))cur.aptName=k.name;
+        if(n){filled+=n;src.push(`K-apt ${n}개`);}
+      }else if(k&&k.candidates&&k.candidates.length){
+        src.push(`K-apt 미매칭(이 법정동 단지: ${k.candidates.slice(0,3).join(', ')}${k.candidates.length>3?' 외':''})`);
+      }
+    }catch(e){ if(e.message==='BADKEY')throw e; }
+
+    /* 2) 건축물대장 — 용적률·주차대수 */
     const bj=parseBunJi(cur.jibun);
-    if(!bj)throw new Error('지번주소가 필요합니다 (예: 서울 노원구 공릉동 707)');
-    const url=`${API}BldRgstHubService/getBrTitleInfo?serviceKey=${encodeURIComponent(key)}`
-      +`&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&platGbCd=${bj.san}&bun=${bj.bun}&ji=${bj.ji}`
-      +`&numOfRows=50&pageNo=1&_type=json`;
-    const j=await jsonApi(url);
-    const items=j?.response?.body?.items?.item;
-    const arr=Array.isArray(items)?items:(items?[items]:[]);
-    if(!arr.length)throw new Error('건축물대장에서 해당 지번을 찾지 못했습니다');
-    // 세대수가 가장 큰 동을 대표로
-    arr.sort((a,b)=>num(b.hhldCnt)-num(a.hhldCnt));
-    const t=arr[0];
-    if(setAuto('far',t.vlRat))filled++;
-    if(setAuto('parking',t.totPkngCnt))filled++;
-    if(setAuto('households',t.hhldCnt))filled++;
-    if(t.useAprDay&&setAuto('moveIn',String(t.useAprDay).replace(/^(\d{4})(\d{2}).*$/,'$1-$2')))filled++;
-    if(setAuto('supply',t.totArea))filled++;
-    if(num(t.hhldCnt)>0&&num(t.totPkngCnt)>0&&setAuto('parkingPer',(num(t.totPkngCnt)/num(t.hhldCnt)).toFixed(2)))filled++;
-    toast(filled?`건축물대장에서 ${filled}개 항목을 채웠습니다`:'새로 채울 빈 항목이 없었습니다');
+    if(bj){
+      const q=`&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&platGbCd=${bj.san}&bun=${bj.bun}&ji=${bj.ji}`;
+      try{
+        const j=await jsonApi(`${API}BldRgstHubService/getBrTitleInfo?serviceKey=${encodeURIComponent(key)}${q}&numOfRows=50&pageNo=1&_type=json`);
+        const arr=itemsOf(j);
+        if(arr.length){
+          arr.sort((a,b)=>num(b.hhldCnt)-num(a.hhldCnt));
+          const t=arr[0]; let n=0;
+          if(setAuto('far',t.vlRat))n++;
+          if(setAuto('parking',t.totPkngCnt))n++;
+          if(setAuto('households',t.hhldCnt))n++;
+          if(t.useAprDay&&setAuto('moveIn',String(t.useAprDay).replace(/^(\d{4})(\d{2}).*$/,'$1-$2')))n++;
+          const hh=num(cur.households)||num(t.hhldCnt);
+          if(hh>0&&num(t.totPkngCnt)>0&&setAuto('parkingPer',(num(t.totPkngCnt)/hh).toFixed(2)))n++;
+          if(n){filled+=n;src.push(`건축물대장 ${n}개`);}
+        }
+      }catch(e){ if(e.message==='BADKEY')throw e; }
+
+      /* 3) 지역지구구역 — 용도지역 */
+      try{
+        const j=await jsonApi(`${API}BldRgstHubService/getBrJijiguInfo?serviceKey=${encodeURIComponent(key)}${q}&numOfRows=50&pageNo=1&_type=json`);
+        const names=[...new Set(itemsOf(j).map(x=>x.jijiguCdNm).filter(Boolean))];
+        if(names.length&&setAuto('jimok',names.join(', '))){filled++;src.push('용도지역');}
+      }catch(e){ if(e.message==='BADKEY')throw e; }
+
+      /* 4) 주택가격 — 공시가격 */
+      try{
+        const j=await jsonApi(`${API}BldRgstHubService/getBrHsprcInfo?serviceKey=${encodeURIComponent(key)}${q}&numOfRows=50&pageNo=1&_type=json`);
+        const arr=itemsOf(j).filter(x=>num(x.hsprc)>0);
+        if(arr.length){
+          arr.sort((a,b)=>String(b.crtnDay||'').localeCompare(String(a.crtnDay||'')));
+          const won=num(arr[0].hsprc);
+          if(setAuto('pubPrice',Math.round(won/10000))){filled++;src.push('공시가격');}
+        }
+      }catch(e){ if(e.message==='BADKEY')throw e; }
+    }else{
+      src.push('지번주소가 없어 건축물대장은 건너뜀');
+    }
+
+    toast(filled?`${filled}개 항목을 채웠습니다 · ${src.join(' / ')}`
+                :(src.length?src.join(' / '):'새로 채울 빈 항목이 없었습니다'));
     renderPanes();
   }catch(e){
     toast(e.message==='BADKEY'?'인증키가 유효하지 않습니다':(e.message||'불러오지 못했습니다'));
   }finally{ const b=$('#afComplex'); if(b){b.disabled=false;b.textContent='⚡ 공공데이터 자동채움';} }
+}
+
+/* ---- 주변 생활편의시설 (소상공인 상가정보 반경조회) ---- */
+const SDSC='https://apis.data.go.kr/B553077/api/open/sdsc2/';
+async function autofillArea(){
+  const key=dataKey(); if(!key)return toast('설정에서 공공데이터 인증키를 먼저 등록해 주세요');
+  if(!cur.lat||!cur.lng)return toast('먼저 지도에서 위치를 확정해 주세요');
+  const btn=$('#afArea'); if(btn){btn.disabled=true;btn.textContent='불러오는 중…';}
+  try{
+    const url=`${SDSC}storeListInRadius?serviceKey=${encodeURIComponent(key)}`
+      +`&radius=500&cx=${cur.lng}&cy=${cur.lat}&numOfRows=1000&pageNo=1&type=json`;
+    const j=await jsonApi(url);
+    const arr=itemsOf(j);
+    if(!arr.length)throw new Error('반경 500m 내 상가 데이터를 찾지 못했습니다');
+    const big={}, mid={};
+    arr.forEach(x=>{
+      const L=x.indsLclsNm||'', M=x.indsMclsNm||'';
+      if(L)big[L]=(big[L]||0)+1;
+      if(M)mid[M]=(mid[M]||0)+1;
+    });
+    const top=Object.entries(big).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${k} ${v}`).join(' · ');
+    const summary=`반경 500m 내 상가 ${arr.length}곳 — ${top}`;
+    let filled=0;
+    if(setAuto('amenity',summary))filled++;
+    // 학원 계열은 학군 참고자료로
+    const edu=Object.entries(mid).filter(([k])=>/학원|교육|보육/.test(k))
+      .sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${k} ${v}`).join(' · ');
+    if(edu&&setAuto('school',`반경 500m 내 ${edu}`))filled++;
+    toast(filled?`주변 시설 ${filled}개 항목을 채웠습니다 (상가 ${arr.length}곳 집계)`
+                :`빈 항목이 없어 반영하지 않았습니다 (반경 500m 상가 ${arr.length}곳)`);
+    renderPanes();
+  }catch(e){
+    toast(e.message==='BADKEY'?'인증키가 유효하지 않습니다':(e.message||'불러오지 못했습니다'));
+  }finally{ const b=$('#afArea'); if(b){b.disabled=false;b.textContent='⚡ 주변 시설 자동채움';} }
 }
 async function autofillPrice(){
   const key=dataKey(); if(!key)return toast('설정에서 공공데이터 인증키를 먼저 등록해 주세요');
@@ -1011,7 +1108,8 @@ function liveCalc(){
   const r=jeonseRatio(cur.sale,cur.jeonse), pp=pyeongPrice(cur.sale,cur.pyeong), gap=num(cur.areaPP)-pp;
   const box=document.getElementById('priceCalc');
   if(box)box.innerHTML=`전세가율 <b>${r?r.toFixed(1)+'%':'-'}</b> · 물건 평단가 <b>${pp?pp.toFixed(0)+' 만원/평':'-'}</b>`+
-    (num(cur.areaPP)?` · 지역대비 차익 <b>${gap>=0?'+':''}${gap.toFixed(0)} 만원/평 ${gap>=0?'(저평가)':'(고평가)'}</b>`:'');
+    (num(cur.areaPP)?` · 지역대비 차익 <b>${gap>=0?'+':''}${gap.toFixed(0)} 만원/평 ${gap>=0?'(저평가)':'(고평가)'}</b>`:'')+
+    (num(cur.pubPrice)&&num(cur.sale)?` · 공시가격 대비 <b>${(num(cur.sale)/num(cur.pubPrice)*100).toFixed(0)}%</b>`:'');
   const ab=document.getElementById('aucCalc');
   if(ab){
     const ap=num(cur.apprPrice), mp=num(cur.minPrice), py=num(cur.pyeong);
@@ -1071,7 +1169,9 @@ function renderPanes(){
       </div>
       <div class="mini">저장되는 좌표는 지도에서 직접 확정한 값만 사용합니다.</div>
     </div>
-    <div class="grp"><h4>입지 — 4요소 & 지역분석</h4>
+    <div class="grp"><h4>입지 — 4요소 &amp; 지역분석<span class="sp"></span>
+        <button class="autofill" id="afArea" onclick="autofillArea()">⚡ 주변 시설 자동채움</button></h4>
+      <div class="mini">소상공인시장진흥공단 상가정보에서 <b>반경 500m 내 업종별 개수</b>를 집계해 생활편의시설·학군 칸을 채웁니다. 직접 적으신 값은 덮어쓰지 않습니다.</div>
       <div class="two">${F('일자리(주변 직장/명)','jobs','text')}${F('교통(주요지 소요, 분)','transit','text')}</div>
       ${F('전철/역세권','subway','text','예: 7호선 태릉입구 도보 8분')}
       ${F('학군','school','textarea','배정 초·중, 학원가, 학업성취도 등')}
@@ -1108,6 +1208,7 @@ function renderPanes(){
       <div class="two">${F('매매가(만원)','sale','number')}${F('전세가(만원)','jeonse','number')}</div>
       <div class="mini">전세가율 = 전세 ÷ 매매 × 100 · 물건 평단가 = 매매 ÷ 평형</div>
       ${F('지역 평단가(만원/평)','areaPP','number','비교 기준 시세')}
+      ${F('공시가격(만원)','pubPrice','number','자동채움으로 가져옵니다')}
       ${F('지역 내 급지 평가','grade','select','',['1급지','2급지','3급지','4급지','기타'])}
     </div>`;
   }
